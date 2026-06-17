@@ -14,16 +14,34 @@ export interface Star {
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// URL 환경변수가 비었거나 https URL이 아니면(예: 키를 잘못 넣은 경우)
+// createClient가 throw 하면서 빌드 전체가 깨진다. 그런 값은 미리 걸러낸다.
+function isValidHttpUrl(value?: string): boolean {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export const isSupabaseConfigured = isValidHttpUrl(url) && Boolean(anon);
+
 // 환경 변수가 설정되기 전에도 앱이 죽지 않도록 lazy 싱글톤으로 보관한다.
 let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient | null {
-  if (!url || !anon) return null;
-  if (!client) client = createClient(url, anon);
+  if (!isSupabaseConfigured) return null;
+  if (!client) {
+    try {
+      client = createClient(url!, anon!);
+    } catch {
+      return null;
+    }
+  }
   return client;
 }
-
-export const isSupabaseConfigured = Boolean(url && anon);
 
 // 작은별 3개 = 큰별 1개
 export const SMALL_PER_BIG = 3;
