@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -92,19 +92,43 @@ export default function GrandsonPage() {
     })
   );
 
+  // 낙관적 배치: 놓는 즉시 슬롯에 표시(스냅백 없이). DB/실시간이 따라오면 정리.
+  const [optimistic, setOptimistic] = useState<Record<string, number>>({});
+  useEffect(() => {
+    setOptimistic((o) => {
+      const next = { ...o };
+      let changed = false;
+      for (const s of stars) {
+        if (s.id in next && s.slot === next[s.id]) {
+          delete next[s.id];
+          changed = true;
+        }
+      }
+      return changed ? next : o;
+    });
+  }, [stars]);
+
+  const effStars = useMemo(
+    () =>
+      stars.map((s) =>
+        s.id in optimistic ? { ...s, slot: optimistic[s.id] } : s
+      ),
+    [stars, optimistic]
+  );
+
   const filled = useMemo(() => {
     const m = new Map<number, Star>();
-    stars.forEach((s) => {
+    effStars.forEach((s) => {
       if (s.slot != null) m.set(s.slot, s);
     });
     return m;
-  }, [stars]);
+  }, [effStars]);
 
-  const pool = useMemo(() => stars.filter((s) => s.slot == null), [stars]);
+  const pool = useMemo(() => effStars.filter((s) => s.slot == null), [effStars]);
   const poolSmall = pool.filter((s) => s.size === "small");
   const poolBig = pool.filter((s) => s.size === "big");
-  const completed = isComplete(stars);
-  const placedCount = filledSlotSet(stars).size;
+  const completed = isComplete(effStars);
+  const placedCount = filledSlotSet(effStars).size;
 
   const flash = (t: string) => {
     setMsg(t);
@@ -126,8 +150,18 @@ export default function GrandsonPage() {
       flash(SLOTS[slot].size === "big" ? "여긴 큰별 자리예요!" : "여긴 작은별 자리예요!");
       return;
     }
+    // 낙관적으로 즉시 배치 표시 → 스냅백 애니메이션 없이 바로 자리에 박힌다.
+    setOptimistic((o) => ({ ...o, [star.id]: slot }));
     // 한 번 배치하면 뺄 수 없음 → slot만 채우고 끝
-    await sb.from("stars").update({ slot }).eq("id", star.id);
+    const { error } = await sb.from("stars").update({ slot }).eq("id", star.id);
+    if (error) {
+      setOptimistic((o) => {
+        const n = { ...o };
+        delete n[star.id];
+        return n;
+      });
+      flash("배치 실패: " + (error.message || ""));
+    }
   };
 
   // 미배치 작은별 3개 → 큰별 1개
@@ -249,7 +283,7 @@ export default function GrandsonPage() {
         )}
       </main>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {active ? <StarIcon size={active.size} /> : null}
       </DragOverlay>
     </DndContext>
