@@ -13,7 +13,7 @@ function formatDate(iso: string) {
 }
 
 // 할아버지가 타이핑 없이 한 번에 넣을 수 있는 이모티콘
-const EMOJIS = ["👍", "❤️", "⭐", "😊", "🎉", "🥰", "👏", "🌟"];
+const EMOJIS = ["👍", "❤️", "⭐", "😊", "🎉"];
 
 export default function GrandpaPage() {
   const { stars, gifts, sb, reload } = useGame();
@@ -106,7 +106,7 @@ export default function GrandpaPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-2xl px-4 pb-32 pt-6 sm:px-6 sm:pt-10">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-amber-900">👴 할아버지</h1>
         <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
