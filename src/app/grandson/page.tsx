@@ -286,20 +286,20 @@ export default function GrandsonPage() {
         {/* 컨트롤 + 받은 별 풀 */}
         {!completed && (
           <section className="px-4 pb-8">
-            <div className="mb-3 flex flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
+            <div className="mx-auto mb-3 grid max-w-md grid-cols-2 gap-2">
               <button
                 onClick={combine}
                 disabled={poolSmall.length < SMALL_PER_BIG}
                 className="rounded-full bg-amber-400 px-4 py-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 disabled:opacity-40 sm:w-auto sm:py-2"
               >
-                ✨ 합치기 (작은별 3 → 큰별 1)
+                ✨ 합치기
               </button>
               <button
                 onClick={split}
                 disabled={poolBig.length < 1}
                 className="rounded-full bg-sky-400 px-4 py-3 text-sm font-semibold text-sky-950 transition hover:bg-sky-300 disabled:opacity-40 sm:w-auto sm:py-2"
               >
-                ✂️ 나누기 (큰별 1 → 작은별 3)
+                ✂️ 나누기
               </button>
             </div>
 

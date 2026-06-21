@@ -27,6 +27,10 @@ export default function GrandpaPage() {
   const placed = filledSlotSet(stars).size;
   const pendingBig = pending.filter((s) => s === "big").length;
   const pendingSmall = pending.filter((s) => s === "small").length;
+  const today = (() => {
+    const d = new Date();
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  })();
 
   const flash = (t: string) => {
     setMsg(t);
@@ -120,7 +124,7 @@ export default function GrandpaPage() {
       {!completed && (
         <>
           {/* 별 만들기 */}
-          <section className="grid gap-4 sm:grid-cols-2">
+          <section className="grid grid-cols-2 gap-3 sm:gap-4">
             <button
               onClick={() => addStar("big")}
               disabled={!sb}
@@ -173,7 +177,7 @@ export default function GrandpaPage() {
               )}
             </div>
             <label className="mt-3 block text-sm font-semibold text-slate-600">
-              ✉️ 편지 (선택) — 별과 함께 손자에게 전해져요
+              ✉️ 우주에게 보내는 할아버지 편지 ({today})
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
               {EMOJIS.map((e) => (
