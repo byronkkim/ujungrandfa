@@ -272,7 +272,7 @@ export default function GrandsonPage() {
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <main className="flex min-h-full flex-col">
         <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <h1 className="text-2xl font-bold text-sky-900">🧒 손자</h1>
+          <h1 className="text-2xl font-bold text-sky-900">🧒 우주</h1>
           <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
             ← 처음으로
           </Link>

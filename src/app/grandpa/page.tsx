@@ -126,7 +126,7 @@ export default function GrandpaPage() {
         <div className="mb-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-6 text-center">
           <div className="text-2xl">🎉🌟🎉</div>
           <p className="mt-2 text-lg font-bold text-amber-900">
-            손자가 모든 별을 모았습니다.
+            우주가 모든 별을 모았습니다.
           </p>
           <p className="text-amber-800">축하해주세요!</p>
           <button
@@ -213,7 +213,7 @@ export default function GrandpaPage() {
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              placeholder="손자에게 보내는 편지를 적어요 (이모티콘만 눌러도 돼요) — 예: 심부름 잘했어요 🐶"
+              placeholder="우주에게 보내는 편지를 적어요 (이모티콘만 눌러도 돼요) — 예: 심부름 잘했어요 🐶"
               rows={3}
               className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-amber-400"
             />
@@ -222,7 +222,7 @@ export default function GrandpaPage() {
               disabled={busy || !sb || pending.length === 0}
               className="mt-3 w-full rounded-xl bg-amber-500 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              📨 손자에게 보내기 {pending.length > 0 && `(${pending.length}개)`}
+              📨 우주에게 보내기 {pending.length > 0 && `(${pending.length}개)`}
             </button>
           </section>
         </>
@@ -230,7 +230,7 @@ export default function GrandpaPage() {
 
       {/* 진행 상황 */}
       <p className="mt-6 text-center text-sm text-slate-500">
-        손자가 모은 별: <b className="text-amber-700">{placed}</b> / {TOTAL_SLOTS}
+        우주가 모은 별: <b className="text-amber-700">{placed}</b> / {TOTAL_SLOTS}
       </p>
 
       {/* 전달 기록 */}

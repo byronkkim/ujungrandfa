@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: { default: "별 모으기 ⭐", template: "별 모으기 - %s" },
-  description: "할아버지와 손자의 별 모으기",
+  description: "할아버지와 우주의 별 모으기",
 };
 
 export default function RootLayout({

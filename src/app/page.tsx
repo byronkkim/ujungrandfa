@@ -6,7 +6,7 @@ export default function Home() {
     <main className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center gap-8 px-6 py-16 text-center">
       <h1 className="text-4xl font-bold text-slate-800">⭐ 별 모으기 ⭐</h1>
       <p className="text-slate-500">
-        할아버지가 별을 만들어 주면, 손자가 별판에 모아요.
+        할아버지가 별을 만들어 주면, 우주가 별판에 모아요.
       </p>
 
       <div className="grid w-full gap-5 sm:grid-cols-2">
@@ -23,7 +23,7 @@ export default function Home() {
           href="/grandson"
           className="rounded-2xl border-2 border-sky-300 bg-sky-50 px-6 py-10 text-xl font-semibold text-sky-900 shadow-sm transition hover:scale-[1.02] hover:bg-sky-100"
         >
-          🧒 손자
+          🧒 우주
           <span className="mt-2 block text-sm font-normal text-sky-700">
             별판에 별 모으기
           </span>
