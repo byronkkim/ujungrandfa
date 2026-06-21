@@ -80,8 +80,14 @@ function SkySlot({
   );
 }
 
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+
 export default function GrandsonPage() {
-  const { stars, sb } = useGame();
+  const { stars, gifts, sb } = useGame();
+  const letters = gifts.filter((g) => g.memo);
   const [active, setActive] = useState<Star | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -243,6 +249,31 @@ export default function GrandsonPage() {
             )}
           </div>
         </section>
+
+        {/* 할아버지의 편지 (별과 함께 도착) */}
+        {letters.length > 0 && (
+          <section className="px-4 pb-2">
+            <h2 className="mb-2 text-sm font-semibold text-slate-500">
+              💌 할아버지의 편지
+            </h2>
+            <div className="space-y-2">
+              {letters.map((g) => (
+                <div
+                  key={g.id}
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+                >
+                  <p className="text-xs text-amber-600">
+                    {formatDate(g.created_at)} · 별 {g.big_count + g.small_count}
+                    개와 함께
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">
+                    {g.memo}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 컨트롤 + 받은 별 풀 */}
         {!completed && (

@@ -169,12 +169,15 @@ export default function GrandpaPage() {
                 ))
               )}
             </div>
+            <label className="mt-3 block text-sm font-semibold text-slate-600">
+              ✉️ 편지 (선택) — 별과 함께 손자에게 전해져요
+            </label>
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              placeholder="메모 (선택) — 예: 우리 강아지 심부름 잘했어요 🐶"
-              rows={2}
-              className="mt-3 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-400"
+              placeholder="손자에게 보내는 편지를 적어요 — 예: 우리 강아지 심부름 잘했어요 🐶"
+              rows={3}
+              className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-400"
             />
             <button
               onClick={send}
@@ -222,8 +225,8 @@ export default function GrandpaPage() {
                 </span>
               </p>
               {g.memo && (
-                <p className="mt-1 rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900">
-                  📝 {g.memo}
+                <p className="mt-1 whitespace-pre-wrap rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900">
+                  💌 {g.memo}
                 </p>
               )}
             </div>
