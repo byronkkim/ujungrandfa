@@ -26,8 +26,14 @@ import {
   isComplete,
 } from "@/lib/supabase";
 
-// 풀(미배치)에서 끌 수 있는 별
-function PoolStar({ star }: { star: Star }) {
+// 끌 수 있는 별 (풀의 미배치 별 + 하늘에 배치된 별 공용)
+function DraggableStar({
+  star,
+  className,
+}: {
+  star: Star;
+  className?: string;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: star.id,
     data: { star },
@@ -40,12 +46,17 @@ function PoolStar({ star }: { star: Star }) {
       className="touch-none cursor-grab active:cursor-grabbing"
       style={{ opacity: isDragging ? 0.3 : 1 }}
     >
-      <StarIcon size={star.size} />
+      <StarIcon size={star.size} className={className} />
     </button>
   );
 }
 
-// 하늘에 흩뿌려진 슬롯 한 칸 (droppable)
+const SLOT_CLASS = {
+  big: "h-14 w-14 sm:h-20 sm:w-20",
+  small: "h-9 w-9 sm:h-12 sm:w-12",
+} as const;
+
+// 하늘에 흩뿌려진 슬롯 한 칸 (droppable). 배치된 별은 다시 끌 수 있다.
 function SkySlot({
   index,
   star,
@@ -75,15 +86,50 @@ function SkySlot({
         animationPlayState: isOver ? "paused" : "running",
       }}
     >
-      <StarIcon
-        size={def.size}
-        variant={star ? "filled" : "empty"}
-        className={
-          def.size === "big"
-            ? "h-11 w-11 sm:h-16 sm:w-16"
-            : "h-7 w-7 sm:h-9 sm:w-9"
-        }
-      />
+      {star ? (
+        <DraggableStar star={star} className={SLOT_CLASS[def.size]} />
+      ) : (
+        <StarIcon
+          size={def.size}
+          variant="empty"
+          className={SLOT_CLASS[def.size]}
+        />
+      )}
+    </div>
+  );
+}
+
+// 받은 별 트레이 (droppable) — 배치된 별을 여기로 끌면 빠진다.
+function PoolTray({
+  pool,
+  poolBig,
+  poolSmall,
+}: {
+  pool: Star[];
+  poolBig: number;
+  poolSmall: number;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: "pool" });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-2xl border p-4 transition ${
+        isOver ? "border-sky-400 bg-sky-100" : "border-slate-200 bg-slate-50"
+      }`}
+    >
+      <p className="mb-2 text-center text-sm font-semibold text-slate-500">
+        받은 별 — 끌어서 하늘에 넣기 (놓은 별도 끌어 이동·여기로 빼기) · 큰별{" "}
+        {poolBig} · 작은별 {poolSmall}
+      </p>
+      <div className="flex min-h-[70px] flex-wrap items-center justify-center gap-3">
+        {pool.length === 0 ? (
+          <span className="text-sm text-slate-400">
+            할아버지가 별을 보내면 여기에 나타나요.
+          </span>
+        ) : (
+          pool.map((s) => <DraggableStar key={s.id} star={s} />)
+        )}
+      </div>
     </div>
   );
 }
@@ -106,8 +152,10 @@ export default function GrandsonPage() {
     })
   );
 
-  // 낙관적 배치: 놓는 즉시 슬롯에 표시(스냅백 없이). DB/실시간이 따라오면 정리.
-  const [optimistic, setOptimistic] = useState<Record<string, number>>({});
+  // 낙관적 배치/이동/빼기: 놓는 즉시 반영(스냅백 없이). DB/실시간이 따라오면 정리.
+  const [optimistic, setOptimistic] = useState<Record<string, number | null>>(
+    {}
+  );
   useEffect(() => {
     setOptimistic((o) => {
       const next = { ...o };
@@ -152,30 +200,41 @@ export default function GrandsonPage() {
   const onDragStart = (e: DragStartEvent) =>
     setActive((e.active.data.current?.star as Star) ?? null);
 
+  const applySlot = async (star: Star, slot: number | null) => {
+    const prev = star.slot;
+    setOptimistic((o) => ({ ...o, [star.id]: slot }));
+    const { error } = await sb!.from("stars").update({ slot }).eq("id", star.id);
+    if (error) {
+      // 실패하면 낙관적 변경 되돌림
+      setOptimistic((o) => ({ ...o, [star.id]: prev }));
+      flash("실패: " + (error.message || ""));
+    }
+  };
+
   const onDragEnd = async (e: DragEndEvent) => {
     setActive(null);
     if (!sb) return;
     const star = e.active.data.current?.star as Star | undefined;
     const overId = e.over?.id?.toString();
-    if (!star || !overId?.startsWith("slot-")) return;
+    if (!star) return;
+
+    // 받은 별 트레이로 끌면 → 빼기 (배치 해제)
+    if (overId === "pool") {
+      if (star.slot == null) return; // 이미 풀에 있음
+      await applySlot(star, null);
+      return;
+    }
+
+    if (!overId?.startsWith("slot-")) return;
     const slot = Number(overId.replace("slot-", ""));
-    if (filled.has(slot)) return;
+    if (slot === star.slot) return; // 같은 자리
+    if (filled.has(slot)) return; // 이미 차 있음
     if (SLOTS[slot].size !== star.size) {
       flash(SLOTS[slot].size === "big" ? "여긴 큰별 자리예요!" : "여긴 작은별 자리예요!");
       return;
     }
-    // 낙관적으로 즉시 배치 표시 → 스냅백 애니메이션 없이 바로 자리에 박힌다.
-    setOptimistic((o) => ({ ...o, [star.id]: slot }));
-    // 한 번 배치하면 뺄 수 없음 → slot만 채우고 끝
-    const { error } = await sb.from("stars").update({ slot }).eq("id", star.id);
-    if (error) {
-      setOptimistic((o) => {
-        const n = { ...o };
-        delete n[star.id];
-        return n;
-      });
-      flash("배치 실패: " + (error.message || ""));
-    }
+    // 배치/이동: 즉시 반영
+    await applySlot(star, slot);
   };
 
   // 미배치 작은별 3개 → 큰별 1개
@@ -226,21 +285,11 @@ export default function GrandsonPage() {
         {/* 받은 별 풀 + 합치기/나누기 (최상단) */}
         {!completed && (
           <section className="px-4 pb-3 pt-1">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-2 text-center text-sm font-semibold text-slate-500">
-                받은 별 — 끌어서 하늘의 빈 별에 넣어요 (큰별 {poolBig.length} · 작은별{" "}
-                {poolSmall.length})
-              </p>
-              <div className="flex min-h-[70px] flex-wrap items-center justify-center gap-3">
-                {pool.length === 0 ? (
-                  <span className="text-sm text-slate-400">
-                    할아버지가 별을 보내면 여기에 나타나요.
-                  </span>
-                ) : (
-                  pool.map((s) => <PoolStar key={s.id} star={s} />)
-                )}
-              </div>
-            </div>
+            <PoolTray
+              pool={pool}
+              poolBig={poolBig.length}
+              poolSmall={poolSmall.length}
+            />
             <div className="mx-auto mt-3 grid max-w-md grid-cols-2 gap-2">
               <button
                 onClick={combine}
@@ -262,7 +311,7 @@ export default function GrandsonPage() {
 
         {/* 우주 하늘 별판 */}
         <section className="relative mx-3 mb-4 overflow-hidden rounded-3xl sm:mx-4">
-          <div className="sky relative h-[58vh] min-h-[420px] w-full">
+          <div className="sky relative h-[40vh] min-h-[300px] w-full">
             {SLOTS.map((_, i) => (
               <SkySlot
                 key={i}
