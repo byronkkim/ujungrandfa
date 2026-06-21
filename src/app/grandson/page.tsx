@@ -17,7 +17,13 @@ import {
 import { StarIcon } from "@/components/StarIcon";
 import { ConfigBanner } from "@/components/ConfigBanner";
 import { useGame } from "@/lib/useGame";
-import { Star, SLOTS, SMALL_PER_BIG, isComplete } from "@/lib/supabase";
+import {
+  Star,
+  SLOTS,
+  SMALL_PER_BIG,
+  isComplete,
+  starSummary,
+} from "@/lib/supabase";
 
 // 끌 수 있는 별 (풀의 미배치 별 + 하늘에 배치된 별 공용)
 function DraggableStar({
@@ -346,8 +352,8 @@ export default function GrandsonPage() {
                   className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
                 >
                   <p className="text-xs text-amber-600">
-                    {formatDate(g.created_at)} · 별 {g.big_count + g.small_count}
-                    개와 함께
+                    {formatDate(g.created_at)} ·{" "}
+                    {starSummary(g.big_count, g.small_count)}와 함께
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">
                     {g.memo}

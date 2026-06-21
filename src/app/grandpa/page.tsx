@@ -5,7 +5,13 @@ import { useState } from "react";
 import { StarIcon } from "@/components/StarIcon";
 import { ConfigBanner } from "@/components/ConfigBanner";
 import { useGame } from "@/lib/useGame";
-import { Gift, TOTAL_SLOTS, filledSlotSet, isComplete } from "@/lib/supabase";
+import {
+  Gift,
+  TOTAL_SLOTS,
+  filledSlotSet,
+  isComplete,
+  starSummary,
+} from "@/lib/supabase";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -249,18 +255,12 @@ export default function GrandpaPage() {
               key={g.id}
               className="rounded-xl border border-slate-200 bg-white px-4 py-3"
             >
-              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-700">
-                <b>{formatDate(g.created_at)}</b>
-                <span>· 할아버지가</span>
-                {Array.from({ length: g.big_count }, (_, i) => (
-                  <StarIcon key={`b${i}`} size="big" px={20} />
-                ))}
-                {Array.from({ length: g.small_count }, (_, i) => (
-                  <StarIcon key={`s${i}`} size="small" px={16} />
-                ))}
-                <span>
-                  ({g.big_count + g.small_count}개) 줬어요
-                </span>
+              <p className="text-sm text-slate-700">
+                <b>{formatDate(g.created_at)}</b> · 할아버지가{" "}
+                <b className="text-amber-700">
+                  {starSummary(g.big_count, g.small_count)}
+                </b>
+                를 줬어요
               </p>
               {g.memo && (
                 <p className="mt-1 whitespace-pre-wrap rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900">

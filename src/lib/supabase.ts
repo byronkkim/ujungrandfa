@@ -93,3 +93,11 @@ export function filledSlotSet(stars: Star[]): Set<number> {
 export function isComplete(stars: Star[]): boolean {
   return filledSlotSet(stars).size >= TOTAL_SLOTS;
 }
+
+// 전달 내역/편지에 큰별·작은별을 구별해서 표기 (0개는 생략).
+export function starSummary(big: number, small: number): string {
+  const parts: string[] = [];
+  if (big > 0) parts.push(`큰별 ${big}개`);
+  if (small > 0) parts.push(`작은별 ${small}개`);
+  return parts.join(" · ") || "별 0개";
+}
