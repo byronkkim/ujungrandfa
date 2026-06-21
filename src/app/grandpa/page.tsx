@@ -13,63 +13,71 @@ function formatDate(iso: string) {
 }
 
 export default function GrandpaPage() {
-  const { stars, gifts, sb } = useGame();
-  const [pendingSmall, setPendingSmall] = useState(0);
-  const [pendingBig, setPendingBig] = useState(0);
+  const { stars, gifts, sb, reload } = useGame();
+  // 보낼 별을 종류 순서대로 쌓아둔다 (클릭마다 한 개씩 추가).
+  const [pending, setPending] = useState<("small" | "big")[]>([]);
   const [memo, setMemo] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const completed = isComplete(stars);
   const placed = filledSlotSet(stars).size;
+  const pendingBig = pending.filter((s) => s === "big").length;
+  const pendingSmall = pending.filter((s) => s === "small").length;
 
   const flash = (t: string) => {
     setMsg(t);
-    setTimeout(() => setMsg(null), 2200);
+    setTimeout(() => setMsg(null), 2600);
   };
+
+  const addStar = (size: "small" | "big") => setPending((p) => [...p, size]);
+  const removeAt = (i: number) =>
+    setPending((p) => p.filter((_, idx) => idx !== i));
 
   const send = async () => {
     if (!sb || busy || completed) return;
-    const total = pendingSmall + pendingBig;
-    if (total === 0) {
+    if (pending.length === 0) {
       flash("별을 먼저 만들어 주세요!");
       return;
     }
     setBusy(true);
-    const { data: gift } = await sb
-      .from("gifts")
-      .insert({
-        small_count: pendingSmall,
-        big_count: pendingBig,
-        memo: memo.trim() || null,
-      })
-      .select()
-      .single();
-    const rows = [
-      ...Array.from({ length: pendingSmall }, () => ({
-        size: "small" as const,
-        gift_id: gift?.id ?? null,
-      })),
-      ...Array.from({ length: pendingBig }, () => ({
-        size: "big" as const,
-        gift_id: gift?.id ?? null,
-      })),
-    ];
-    await sb.from("stars").insert(rows);
-    setPendingSmall(0);
-    setPendingBig(0);
-    setMemo("");
-    setBusy(false);
-    flash("별을 보냈어요! ⭐");
+    try {
+      const { data: gift, error: gErr } = await sb
+        .from("gifts")
+        .insert({
+          small_count: pendingSmall,
+          big_count: pendingBig,
+          memo: memo.trim() || null,
+        })
+        .select()
+        .single();
+      if (gErr) throw gErr;
+      const rows = pending.map((size) => ({ size, gift_id: gift?.id ?? null }));
+      const { error: sErr } = await sb.from("stars").insert(rows);
+      if (sErr) throw sErr;
+      setPending([]);
+      setMemo("");
+      await reload();
+      flash("별을 보냈어요! ⭐");
+    } catch (e) {
+      const m = (e as { message?: string })?.message || "알 수 없는 오류";
+      flash("저장 실패: " + m);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const reset = async () => {
     if (!sb || busy) return;
     if (!confirm("정말 초기화할까요? 모든 별과 기록이 사라집니다.")) return;
     setBusy(true);
-    await sb.from("stars").delete().not("id", "is", null);
-    await sb.from("gifts").delete().not("id", "is", null);
-    setBusy(false);
+    try {
+      await sb.from("stars").delete().not("id", "is", null);
+      await sb.from("gifts").delete().not("id", "is", null);
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -111,7 +119,7 @@ export default function GrandpaPage() {
           {/* 별 만들기 */}
           <section className="grid gap-4 sm:grid-cols-2">
             <button
-              onClick={() => setPendingBig((n) => n + 1)}
+              onClick={() => addStar("big")}
               disabled={!sb}
               className="flex flex-col items-center gap-2 rounded-2xl border-2 border-amber-300 bg-amber-50 py-8 transition hover:bg-amber-100 disabled:opacity-50"
             >
@@ -119,7 +127,7 @@ export default function GrandpaPage() {
               <span className="font-semibold text-amber-900">큰별 만들기</span>
             </button>
             <button
-              onClick={() => setPendingSmall((n) => n + 1)}
+              onClick={() => addStar("small")}
               disabled={!sb}
               className="flex flex-col items-center gap-2 rounded-2xl border-2 border-amber-300 bg-amber-50 py-8 transition hover:bg-amber-100 disabled:opacity-50"
             >
@@ -128,22 +136,37 @@ export default function GrandpaPage() {
             </button>
           </section>
 
-          {/* 보낼 준비 + 메모 + 보내기 */}
+          {/* 보낼 별 (별 아이콘으로 표시, 누르면 빼기) + 메모 + 보내기 */}
           <section className="mt-5 rounded-2xl border border-amber-200 bg-white p-4">
-            <div className="flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-semibold text-slate-600">
-                보낼 별: 큰별 {pendingBig} · 작은별 {pendingSmall}
+                보낼 별
               </span>
-              {pendingBig + pendingSmall > 0 && (
+              {pending.length > 0 && (
                 <button
-                  onClick={() => {
-                    setPendingBig(0);
-                    setPendingSmall(0);
-                  }}
+                  onClick={() => setPending([])}
                   className="text-xs text-slate-400 hover:text-slate-600"
                 >
                   비우기
                 </button>
+              )}
+            </div>
+            <div className="flex min-h-[72px] flex-wrap items-center gap-2 rounded-xl bg-amber-50/60 p-3">
+              {pending.length === 0 ? (
+                <span className="text-sm text-slate-400">
+                  위 버튼을 누르면 별이 하나씩 쌓여요. (별을 누르면 빼기)
+                </span>
+              ) : (
+                pending.map((size, i) => (
+                  <button
+                    key={i}
+                    onClick={() => removeAt(i)}
+                    title="누르면 빼기"
+                    className="transition hover:opacity-50"
+                  >
+                    <StarIcon size={size} />
+                  </button>
+                ))
               )}
             </div>
             <textarea
@@ -155,10 +178,10 @@ export default function GrandpaPage() {
             />
             <button
               onClick={send}
-              disabled={busy || !sb || pendingBig + pendingSmall === 0}
+              disabled={busy || !sb || pending.length === 0}
               className="mt-3 w-full rounded-xl bg-amber-500 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              📨 손자에게 보내기
+              📨 손자에게 보내기 {pending.length > 0 && `(${pending.length}개)`}
             </button>
           </section>
         </>
@@ -185,13 +208,17 @@ export default function GrandpaPage() {
               key={g.id}
               className="rounded-xl border border-slate-200 bg-white px-4 py-3"
             >
-              <p className="text-sm text-slate-700">
-                <b>{formatDate(g.created_at)}</b> · 할아버지가{" "}
-                <b className="text-amber-700">{g.big_count + g.small_count}개</b>
-                의 별을 줬어요
-                <span className="text-slate-400">
-                  {" "}
-                  (큰별 {g.big_count}, 작은별 {g.small_count})
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-700">
+                <b>{formatDate(g.created_at)}</b>
+                <span>· 할아버지가</span>
+                {Array.from({ length: g.big_count }, (_, i) => (
+                  <StarIcon key={`b${i}`} size="big" px={20} />
+                ))}
+                {Array.from({ length: g.small_count }, (_, i) => (
+                  <StarIcon key={`s${i}`} size="small" px={16} />
+                ))}
+                <span>
+                  ({g.big_count + g.small_count}개) 줬어요
                 </span>
               </p>
               {g.memo && (
