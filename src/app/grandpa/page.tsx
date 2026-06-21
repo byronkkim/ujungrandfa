@@ -49,6 +49,13 @@ export default function GrandpaPage() {
     }
     setBusy(true);
     try {
+      // 🥚 이스터에그: 큰별 10 + 작은별 10 + 편지에 별(⭐/🌟) 10개를 함께 보내면
+      //    우주가 받은 별이 전부 초기화된다. (편지는 남는다)
+      const starEmoji =
+        (memo.match(/⭐/g)?.length ?? 0) + (memo.match(/🌟/g)?.length ?? 0);
+      const easterEgg =
+        pendingBig === 10 && pendingSmall === 10 && starEmoji === 10;
+
       const { data: gift, error: gErr } = await sb
         .from("gifts")
         .insert({
@@ -59,6 +66,17 @@ export default function GrandpaPage() {
         .select()
         .single();
       if (gErr) throw gErr;
+
+      if (easterEgg) {
+        // 편지(gift)는 위에서 이미 저장됨 → 별만 전부 초기화
+        await sb.from("stars").delete().not("id", "is", null);
+        setPending([]);
+        setMemo("");
+        await reload();
+        flash("✨ 비밀 마법 발동! 우주의 별이 초기화됐어요 (편지는 남아요)");
+        return;
+      }
+
       const rows = pending.map((size) => ({ size, gift_id: gift?.id ?? null }));
       const { error: sErr } = await sb.from("stars").insert(rows);
       if (sErr) throw sErr;

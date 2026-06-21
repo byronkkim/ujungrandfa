@@ -223,6 +223,43 @@ export default function GrandsonPage() {
           <ConfigBanner />
         </div>
 
+        {/* 받은 별 풀 + 합치기/나누기 (최상단) */}
+        {!completed && (
+          <section className="px-4 pb-3 pt-1">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="mb-2 text-center text-sm font-semibold text-slate-500">
+                받은 별 — 끌어서 하늘의 빈 별에 넣어요 (큰별 {poolBig.length} · 작은별{" "}
+                {poolSmall.length})
+              </p>
+              <div className="flex min-h-[70px] flex-wrap items-center justify-center gap-3">
+                {pool.length === 0 ? (
+                  <span className="text-sm text-slate-400">
+                    할아버지가 별을 보내면 여기에 나타나요.
+                  </span>
+                ) : (
+                  pool.map((s) => <PoolStar key={s.id} star={s} />)
+                )}
+              </div>
+            </div>
+            <div className="mx-auto mt-3 grid max-w-md grid-cols-2 gap-2">
+              <button
+                onClick={combine}
+                disabled={poolSmall.length < SMALL_PER_BIG}
+                className="rounded-full bg-amber-400 px-4 py-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 disabled:opacity-40 sm:w-auto sm:py-2"
+              >
+                ✨ 합치기
+              </button>
+              <button
+                onClick={split}
+                disabled={poolBig.length < 1}
+                className="rounded-full bg-sky-400 px-4 py-3 text-sm font-semibold text-sky-950 transition hover:bg-sky-300 disabled:opacity-40 sm:w-auto sm:py-2"
+              >
+                ✂️ 나누기
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* 우주 하늘 별판 */}
         <section className="relative mx-3 mb-4 overflow-hidden rounded-3xl sm:mx-4">
           <div className="sky relative h-[58vh] min-h-[420px] w-full">
@@ -283,43 +320,6 @@ export default function GrandsonPage() {
           </section>
         )}
 
-        {/* 컨트롤 + 받은 별 풀 */}
-        {!completed && (
-          <section className="px-4 pb-8">
-            <div className="mx-auto mb-3 grid max-w-md grid-cols-2 gap-2">
-              <button
-                onClick={combine}
-                disabled={poolSmall.length < SMALL_PER_BIG}
-                className="rounded-full bg-amber-400 px-4 py-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 disabled:opacity-40 sm:w-auto sm:py-2"
-              >
-                ✨ 합치기
-              </button>
-              <button
-                onClick={split}
-                disabled={poolBig.length < 1}
-                className="rounded-full bg-sky-400 px-4 py-3 text-sm font-semibold text-sky-950 transition hover:bg-sky-300 disabled:opacity-40 sm:w-auto sm:py-2"
-              >
-                ✂️ 나누기
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-2 text-center text-sm font-semibold text-slate-500">
-                받은 별 — 끌어서 하늘의 빈 별에 넣어요 (큰별 {poolBig.length} · 작은별{" "}
-                {poolSmall.length})
-              </p>
-              <div className="flex min-h-[70px] flex-wrap items-center justify-center gap-3">
-                {pool.length === 0 ? (
-                  <span className="text-sm text-slate-400">
-                    할아버지가 별을 보내면 여기에 나타나요.
-                  </span>
-                ) : (
-                  pool.map((s) => <PoolStar key={s.id} star={s} />)
-                )}
-              </div>
-            </div>
-          </section>
-        )}
       </main>
 
       <DragOverlay dropAnimation={null}>
