@@ -110,9 +110,11 @@ function PoolTray({
         isOver ? "border-sky-400 bg-sky-100" : "border-slate-200 bg-slate-50"
       }`}
     >
-      <p className="mb-2 text-center text-sm font-semibold text-slate-500">
-        받은 별 — 끌어서 하늘에 넣기 (놓은 별도 끌어 이동·여기로 빼기) · 큰별{" "}
-        {poolBig} · 작은별 {poolSmall}
+      <p className="mb-2 text-sm font-semibold text-slate-600">
+        🌠 받은 별
+        <span className="ml-2 text-xs font-normal text-slate-400">
+          큰별 {poolBig} · 작은별 {poolSmall}
+        </span>
       </p>
       <div className="flex min-h-[70px] flex-wrap items-center justify-center gap-3">
         {pool.length === 0 ? (
@@ -262,7 +264,7 @@ export default function GrandsonPage() {
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <main className="pb-10">
+      <main className="pb-32">
         <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <h1 className="text-2xl font-bold text-sky-900">🧒 우주</h1>
           <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
