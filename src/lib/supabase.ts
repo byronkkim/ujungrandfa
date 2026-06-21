@@ -82,9 +82,7 @@ export const SLOTS: SlotDef[] = [
   { size: "small", x: 90, y: 83 },
 ];
 
-export const TOTAL_SLOTS = SLOTS.length; // 20
-export const BIG_SLOTS = SLOTS.filter((s) => s.size === "big").length; // 10
-export const SMALL_SLOTS = SLOTS.filter((s) => s.size === "small").length; // 10
+export const TOTAL_SLOTS = SLOTS.length; // 20 (큰별 10 + 작은별 10)
 
 export function filledSlotSet(stars: Star[]): Set<number> {
   return new Set(
