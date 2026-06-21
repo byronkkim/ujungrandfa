@@ -13,10 +13,12 @@ export function StarIcon({
   size,
   px,
   variant = "filled",
+  className,
 }: {
   size: StarSize;
   px?: number;
   variant?: "filled" | "empty";
+  className?: string;
 }) {
   const dimension = px ?? SIZES[size];
   const filled = variant === "filled";
@@ -24,6 +26,7 @@ export function StarIcon({
     <svg
       width={dimension}
       height={dimension}
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden

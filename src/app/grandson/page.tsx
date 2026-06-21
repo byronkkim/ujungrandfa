@@ -75,7 +75,15 @@ function SkySlot({
         animationPlayState: isOver ? "paused" : "running",
       }}
     >
-      <StarIcon size={def.size} variant={star ? "filled" : "empty"} />
+      <StarIcon
+        size={def.size}
+        variant={star ? "filled" : "empty"}
+        className={
+          def.size === "big"
+            ? "h-11 w-11 sm:h-16 sm:w-16"
+            : "h-7 w-7 sm:h-9 sm:w-9"
+        }
+      />
     </div>
   );
 }
@@ -204,7 +212,7 @@ export default function GrandsonPage() {
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <main className="flex min-h-full flex-col">
-        <header className="flex items-center justify-between px-6 py-4">
+        <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <h1 className="text-2xl font-bold text-sky-900">🧒 손자</h1>
           <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
             ← 처음으로
@@ -216,8 +224,8 @@ export default function GrandsonPage() {
         </div>
 
         {/* 우주 하늘 별판 */}
-        <section className="relative mx-4 mb-4 overflow-hidden rounded-3xl">
-          <div className="sky relative h-[58vh] min-h-[360px] w-full">
+        <section className="relative mx-3 mb-4 overflow-hidden rounded-3xl sm:mx-4">
+          <div className="sky relative h-[58vh] min-h-[420px] w-full">
             {SLOTS.map((_, i) => (
               <SkySlot
                 key={i}
@@ -278,18 +286,18 @@ export default function GrandsonPage() {
         {/* 컨트롤 + 받은 별 풀 */}
         {!completed && (
           <section className="px-4 pb-8">
-            <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+            <div className="mb-3 flex flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
               <button
                 onClick={combine}
                 disabled={poolSmall.length < SMALL_PER_BIG}
-                className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 disabled:opacity-40"
+                className="rounded-full bg-amber-400 px-4 py-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 disabled:opacity-40 sm:w-auto sm:py-2"
               >
                 ✨ 합치기 (작은별 3 → 큰별 1)
               </button>
               <button
                 onClick={split}
                 disabled={poolBig.length < 1}
-                className="rounded-full bg-sky-400 px-4 py-2 text-sm font-semibold text-sky-950 transition hover:bg-sky-300 disabled:opacity-40"
+                className="rounded-full bg-sky-400 px-4 py-3 text-sm font-semibold text-sky-950 transition hover:bg-sky-300 disabled:opacity-40 sm:w-auto sm:py-2"
               >
                 ✂️ 나누기 (큰별 1 → 작은별 3)
               </button>

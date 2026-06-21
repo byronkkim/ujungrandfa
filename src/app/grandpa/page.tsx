@@ -12,6 +12,9 @@ function formatDate(iso: string) {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+// 할아버지가 타이핑 없이 한 번에 넣을 수 있는 이모티콘
+const EMOJIS = ["👍", "❤️", "⭐", "😊", "🎉", "🥰", "👏", "🌟"];
+
 export default function GrandpaPage() {
   const { stars, gifts, sb, reload } = useGame();
   // 보낼 별을 종류 순서대로 쌓아둔다 (클릭마다 한 개씩 추가).
@@ -81,7 +84,7 @@ export default function GrandpaPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-10">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-amber-900">👴 할아버지</h1>
         <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
@@ -172,12 +175,25 @@ export default function GrandpaPage() {
             <label className="mt-3 block text-sm font-semibold text-slate-600">
               ✉️ 편지 (선택) — 별과 함께 손자에게 전해져요
             </label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EMOJIS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => setMemo((m) => m + e)}
+                  aria-label={`${e} 넣기`}
+                  className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-2xl leading-none transition active:scale-95 active:bg-amber-100"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              placeholder="손자에게 보내는 편지를 적어요 — 예: 우리 강아지 심부름 잘했어요 🐶"
+              placeholder="손자에게 보내는 편지를 적어요 (이모티콘만 눌러도 돼요) — 예: 심부름 잘했어요 🐶"
               rows={3}
-              className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-400"
+              className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-amber-400"
             />
             <button
               onClick={send}
