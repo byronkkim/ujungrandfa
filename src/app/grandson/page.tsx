@@ -113,7 +113,7 @@ function PoolTray({
     <div
       ref={setNodeRef}
       className={`rounded-2xl border p-4 transition ${
-        isOver ? "border-sky-400 bg-sky-100" : "border-slate-200 bg-slate-50"
+        isOver ? "border-blue-400 bg-blue-100" : "border-slate-200 bg-slate-50"
       }`}
     >
       <p className="mb-2 text-sm font-semibold text-slate-600">
@@ -272,7 +272,7 @@ export default function GrandsonPage() {
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <main className="pb-32">
         <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <h1 className="text-2xl font-bold text-sky-900">🧒 우주</h1>
+          <h1 className="text-2xl font-bold text-blue-900">🧒 우주</h1>
           <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
             ← 처음으로
           </Link>
@@ -294,14 +294,14 @@ export default function GrandsonPage() {
               <button
                 onClick={combine}
                 disabled={poolSmall.length < SMALL_PER_BIG}
-                className="rounded-full bg-amber-400 px-4 py-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 disabled:opacity-40 sm:w-auto sm:py-2"
+                className="rounded-full bg-orange-400 px-4 py-3 text-sm font-semibold text-orange-950 transition hover:bg-orange-300 disabled:opacity-40 sm:w-auto sm:py-2"
               >
                 ✨ 합치기
               </button>
               <button
                 onClick={split}
                 disabled={poolBig.length < 1}
-                className="rounded-full bg-sky-400 px-4 py-3 text-sm font-semibold text-sky-950 transition hover:bg-sky-300 disabled:opacity-40 sm:w-auto sm:py-2"
+                className="rounded-full bg-blue-400 px-4 py-3 text-sm font-semibold text-blue-950 transition hover:bg-blue-300 disabled:opacity-40 sm:w-auto sm:py-2"
               >
                 ✂️ 나누기
               </button>
@@ -322,7 +322,7 @@ export default function GrandsonPage() {
             ))}
 
             {msg && (
-              <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-sm font-medium text-sky-800">
+              <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-sm font-medium text-blue-800">
                 {msg}
               </div>
             )}
@@ -349,13 +349,13 @@ export default function GrandsonPage() {
               {letters.map((g) => (
                 <div
                   key={g.id}
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+                  className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3"
                 >
-                  <p className="text-xs text-amber-600">
+                  <p className="text-xs text-orange-600">
                     {formatDate(g.created_at)} ·{" "}
                     {starSummary(g.big_count, g.small_count)}와 함께
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-orange-900">
                     {g.memo}
                   </p>
                 </div>

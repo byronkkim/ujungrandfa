@@ -114,7 +114,7 @@ export default function GrandpaPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-32 pt-6 sm:px-6 sm:pt-10">
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-amber-900">👴 할아버지</h1>
+        <h1 className="text-2xl font-bold text-orange-900">👴 할아버지</h1>
         <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
           ← 처음으로
         </Link>
@@ -123,22 +123,22 @@ export default function GrandpaPage() {
       <ConfigBanner />
 
       {msg && (
-        <div className="mb-4 rounded-xl bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-800">
+        <div className="mb-4 rounded-xl bg-orange-100 px-4 py-2 text-center text-sm font-medium text-orange-800">
           {msg}
         </div>
       )}
 
       {completed && (
-        <div className="mb-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-6 text-center">
+        <div className="mb-6 rounded-2xl border-2 border-orange-400 bg-orange-50 px-5 py-6 text-center">
           <div className="text-2xl">🎉🌟🎉</div>
-          <p className="mt-2 text-lg font-bold text-amber-900">
+          <p className="mt-2 text-lg font-bold text-orange-900">
             우주가 모든 별을 모았습니다.
           </p>
-          <p className="text-amber-800">축하해주세요!</p>
+          <p className="text-orange-800">축하해주세요!</p>
           <button
             onClick={reset}
             disabled={busy}
-            className="mt-4 rounded-full bg-amber-500 px-6 py-2 font-semibold text-white transition hover:bg-amber-600 disabled:opacity-50"
+            className="mt-4 rounded-full bg-orange-500 px-6 py-2 font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
           >
             🔄 초기화하기
           </button>
@@ -152,23 +152,23 @@ export default function GrandpaPage() {
             <button
               onClick={() => addStar("big")}
               disabled={!sb}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-amber-300 bg-amber-50 py-8 transition hover:bg-amber-100 disabled:opacity-50"
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-orange-300 bg-orange-50 py-8 transition hover:bg-orange-100 disabled:opacity-50"
             >
               <StarIcon size="big" />
-              <span className="font-semibold text-amber-900">큰별 보내기</span>
+              <span className="font-semibold text-orange-900">큰별 보내기</span>
             </button>
             <button
               onClick={() => addStar("small")}
               disabled={!sb}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-amber-300 bg-amber-50 py-8 transition hover:bg-amber-100 disabled:opacity-50"
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-orange-300 bg-orange-50 py-8 transition hover:bg-orange-100 disabled:opacity-50"
             >
               <StarIcon size="small" />
-              <span className="font-semibold text-amber-900">작은별 보내기</span>
+              <span className="font-semibold text-orange-900">작은별 보내기</span>
             </button>
           </section>
 
           {/* 보낼 별 (별 아이콘으로 표시, 누르면 빼기) + 메모 + 보내기 */}
-          <section className="mt-5 rounded-2xl border border-amber-200 bg-white p-4">
+          <section className="mt-5 rounded-2xl border border-orange-200 bg-white p-4">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-semibold text-slate-600">
                 보낼 별
@@ -182,7 +182,7 @@ export default function GrandpaPage() {
                 </button>
               )}
             </div>
-            <div className="flex min-h-[72px] flex-wrap items-center gap-2 rounded-xl bg-amber-50/60 p-3">
+            <div className="flex min-h-[72px] flex-wrap items-center gap-2 rounded-xl bg-orange-50/60 p-3">
               {pending.length === 0 ? (
                 <span className="text-sm text-slate-400">
                   위 버튼을 누르면 별이 하나씩 쌓여요. (별을 누르면 빼기)
@@ -210,7 +210,7 @@ export default function GrandpaPage() {
                   type="button"
                   onClick={() => setMemo((m) => m + e)}
                   aria-label={`${e} 넣기`}
-                  className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-2xl leading-none transition active:scale-95 active:bg-amber-100"
+                  className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-2xl leading-none transition active:scale-95 active:bg-orange-100"
                 >
                   {e}
                 </button>
@@ -221,12 +221,12 @@ export default function GrandpaPage() {
               onChange={(e) => setMemo(e.target.value)}
               placeholder="우주에게 보내는 편지를 적어요 (이모티콘만 눌러도 돼요) — 예: 심부름 잘했어요 🐶"
               rows={3}
-              className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-amber-400"
+              className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-orange-400"
             />
             <button
               onClick={send}
               disabled={busy || !sb || pending.length === 0}
-              className="mt-3 w-full rounded-xl bg-amber-500 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-3 w-full rounded-xl bg-orange-500 py-3 font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               📨 우주에게 보내기 {pending.length > 0 && `(${pending.length}개)`}
             </button>
@@ -236,7 +236,7 @@ export default function GrandpaPage() {
 
       {/* 진행 상황 */}
       <p className="mt-6 text-center text-sm text-slate-500">
-        우주가 모은 별: <b className="text-amber-700">{placed}</b> / {TOTAL_SLOTS}
+        우주가 모은 별: <b className="text-orange-700">{placed}</b> / {TOTAL_SLOTS}
       </p>
 
       {/* 전달 기록 */}
@@ -257,13 +257,13 @@ export default function GrandpaPage() {
             >
               <p className="text-sm text-slate-700">
                 <b>{formatDate(g.created_at)}</b> · 할아버지가{" "}
-                <b className="text-amber-700">
+                <b className="text-orange-700">
                   {starSummary(g.big_count, g.small_count)}
                 </b>
                 를 줬어요
               </p>
               {g.memo && (
-                <p className="mt-1 whitespace-pre-wrap rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900">
+                <p className="mt-1 whitespace-pre-wrap rounded-lg bg-orange-50 px-3 py-1.5 text-sm text-orange-900">
                   💌 {g.memo}
                 </p>
               )}

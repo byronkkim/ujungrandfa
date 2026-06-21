@@ -12,19 +12,19 @@ export default function Home() {
       <div className="grid w-full gap-5 sm:grid-cols-2">
         <Link
           href="/grandpa"
-          className="rounded-2xl border-2 border-amber-300 bg-amber-50 px-6 py-10 text-xl font-semibold text-amber-900 shadow-sm transition hover:scale-[1.02] hover:bg-amber-100"
+          className="rounded-2xl border-2 border-orange-300 bg-orange-50 px-6 py-10 text-xl font-semibold text-orange-900 shadow-sm transition hover:scale-[1.02] hover:bg-orange-100"
         >
           👴 할아버지
-          <span className="mt-2 block text-sm font-normal text-amber-700">
+          <span className="mt-2 block text-sm font-normal text-orange-700">
             큰별·작은별 만들기
           </span>
         </Link>
         <Link
           href="/grandson"
-          className="rounded-2xl border-2 border-sky-300 bg-sky-50 px-6 py-10 text-xl font-semibold text-sky-900 shadow-sm transition hover:scale-[1.02] hover:bg-sky-100"
+          className="rounded-2xl border-2 border-blue-300 bg-blue-50 px-6 py-10 text-xl font-semibold text-blue-900 shadow-sm transition hover:scale-[1.02] hover:bg-blue-100"
         >
           🧒 우주
-          <span className="mt-2 block text-sm font-normal text-sky-700">
+          <span className="mt-2 block text-sm font-normal text-blue-700">
             별판에 별 모으기
           </span>
         </Link>
