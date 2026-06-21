@@ -58,28 +58,28 @@ export interface SlotDef {
   y: number;
 }
 
-// 보드 전체에 꽉 차게 펼친 배치 (5열 x 4행, 살짝 흩뜨림).
+// 보드 전체에 꽉 차게 펼친 배치 (5열 x 4행). 위·아래 여백을 두고 흩뜨림.
 export const SLOTS: SlotDef[] = [
   { size: "big", x: 11, y: 13 },
-  { size: "small", x: 31, y: 10 },
+  { size: "small", x: 31, y: 11 },
   { size: "big", x: 50, y: 15 },
-  { size: "small", x: 70, y: 9 },
+  { size: "small", x: 70, y: 10 },
   { size: "big", x: 89, y: 14 },
-  { size: "small", x: 9, y: 39 },
+  { size: "small", x: 9, y: 38 },
   { size: "big", x: 30, y: 35 },
-  { size: "small", x: 50, y: 41 },
+  { size: "small", x: 50, y: 40 },
   { size: "big", x: 70, y: 36 },
-  { size: "small", x: 91, y: 39 },
-  { size: "big", x: 10, y: 63 },
-  { size: "small", x: 30, y: 66 },
-  { size: "big", x: 51, y: 60 },
-  { size: "small", x: 71, y: 64 },
-  { size: "big", x: 90, y: 62 },
-  { size: "small", x: 12, y: 89 },
-  { size: "big", x: 32, y: 91 },
-  { size: "small", x: 50, y: 86 },
-  { size: "big", x: 70, y: 90 },
-  { size: "small", x: 90, y: 88 },
+  { size: "small", x: 91, y: 38 },
+  { size: "big", x: 10, y: 60 },
+  { size: "small", x: 30, y: 62 },
+  { size: "big", x: 51, y: 59 },
+  { size: "small", x: 71, y: 62 },
+  { size: "big", x: 90, y: 60 },
+  { size: "small", x: 12, y: 84 },
+  { size: "big", x: 32, y: 85 },
+  { size: "small", x: 50, y: 82 },
+  { size: "big", x: 70, y: 84 },
+  { size: "small", x: 90, y: 83 },
 ];
 
 export const TOTAL_SLOTS = SLOTS.length; // 20

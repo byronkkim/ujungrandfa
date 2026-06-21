@@ -17,14 +17,7 @@ import {
 import { StarIcon } from "@/components/StarIcon";
 import { ConfigBanner } from "@/components/ConfigBanner";
 import { useGame } from "@/lib/useGame";
-import {
-  Star,
-  SLOTS,
-  TOTAL_SLOTS,
-  SMALL_PER_BIG,
-  filledSlotSet,
-  isComplete,
-} from "@/lib/supabase";
+import { Star, SLOTS, SMALL_PER_BIG, isComplete } from "@/lib/supabase";
 
 // 끌 수 있는 별 (풀의 미배치 별 + 하늘에 배치된 별 공용)
 function DraggableStar({
@@ -190,7 +183,6 @@ export default function GrandsonPage() {
   const poolSmall = pool.filter((s) => s.size === "small");
   const poolBig = pool.filter((s) => s.size === "big");
   const completed = isComplete(effStars);
-  const placedCount = filledSlotSet(effStars).size;
 
   const flash = (t: string) => {
     setMsg(t);
@@ -270,7 +262,7 @@ export default function GrandsonPage() {
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <main className="flex min-h-full flex-col">
+      <main className="pb-10">
         <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <h1 className="text-2xl font-bold text-sky-900">🧒 우주</h1>
           <Link href="/" className="text-sm text-slate-400 hover:text-slate-600">
@@ -320,11 +312,6 @@ export default function GrandsonPage() {
                 activeSize={active?.size}
               />
             ))}
-
-            {/* 진행 / 안내 */}
-            <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full bg-black/30 px-4 py-1 text-sm text-white backdrop-blur">
-              {placedCount} / {TOTAL_SLOTS} 모음
-            </div>
 
             {msg && (
               <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-sm font-medium text-sky-800">

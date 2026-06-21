@@ -149,7 +149,7 @@ export default function GrandpaPage() {
               className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-amber-300 bg-amber-50 py-8 transition hover:bg-amber-100 disabled:opacity-50"
             >
               <StarIcon size="big" />
-              <span className="font-semibold text-amber-900">큰별 만들기</span>
+              <span className="font-semibold text-amber-900">큰별 보내기</span>
             </button>
             <button
               onClick={() => addStar("small")}
@@ -157,7 +157,7 @@ export default function GrandpaPage() {
               className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-amber-300 bg-amber-50 py-8 transition hover:bg-amber-100 disabled:opacity-50"
             >
               <StarIcon size="small" />
-              <span className="font-semibold text-amber-900">작은별 만들기</span>
+              <span className="font-semibold text-amber-900">작은별 보내기</span>
             </button>
           </section>
 
