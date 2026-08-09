@@ -98,13 +98,18 @@ export default function GrandpaPage() {
     }
   };
 
-  const reset = async () => {
+  // 새로운 판에 모으기: 별판(stars)만 비운다. 전달 기록·편지(gifts)는 그대로 남긴다.
+  const startNewBoard = async () => {
     if (!sb || busy) return;
-    if (!confirm("정말 초기화할까요? 모든 별과 기록이 사라집니다.")) return;
+    if (
+      !confirm(
+        "새로운 판에 별을 모을까요?\n지금 별판은 비워지지만, 전달 기록과 편지는 그대로 남아요."
+      )
+    )
+      return;
     setBusy(true);
     try {
       await sb.from("stars").delete().not("id", "is", null);
-      await sb.from("gifts").delete().not("id", "is", null);
       await reload();
     } finally {
       setBusy(false);
@@ -136,12 +141,15 @@ export default function GrandpaPage() {
           </p>
           <p className="text-orange-800">축하해주세요!</p>
           <button
-            onClick={reset}
+            onClick={startNewBoard}
             disabled={busy}
             className="mt-4 rounded-full bg-orange-500 px-6 py-2 font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
           >
-            🔄 초기화하기
+            🆕 새로운 판에 모으기
           </button>
+          <p className="mt-2 text-xs text-orange-700/80">
+            전달 기록과 편지는 그대로 남아요.
+          </p>
         </div>
       )}
 

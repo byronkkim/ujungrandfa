@@ -142,7 +142,6 @@ function formatDate(iso: string) {
 
 export default function GrandsonPage() {
   const { stars, gifts, sb } = useGame();
-  const letters = gifts.filter((g) => g.memo);
   const [active, setActive] = useState<Star | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -339,14 +338,14 @@ export default function GrandsonPage() {
           </div>
         </section>
 
-        {/* 할아버지의 편지 (별과 함께 도착) */}
-        {letters.length > 0 && (
+        {/* 지금까지 받은 별 · 편지 (판을 새로 시작해도 계속 남는 히스토리) */}
+        {gifts.length > 0 && (
           <section className="px-4 pb-2">
             <h2 className="mb-2 text-sm font-semibold text-slate-500">
-              💌 할아버지의 편지
+              💌 지금까지 받은 별 · 편지
             </h2>
             <div className="space-y-2">
-              {letters.map((g) => (
+              {gifts.map((g) => (
                 <div
                   key={g.id}
                   className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3"
@@ -355,9 +354,11 @@ export default function GrandsonPage() {
                     {formatDate(g.created_at)} ·{" "}
                     {starSummary(g.big_count, g.small_count)}와 함께
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-orange-900">
-                    {g.memo}
-                  </p>
+                  {g.memo && (
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-orange-900">
+                      {g.memo}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

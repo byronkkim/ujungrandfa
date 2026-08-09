@@ -30,6 +30,16 @@ export default function Home() {
         </Link>
       </div>
 
+      <Link
+        href="/game"
+        className="w-full rounded-2xl border-2 border-slate-700 bg-slate-800 px-6 py-6 text-xl font-semibold text-white shadow-sm transition hover:scale-[1.02] hover:bg-slate-700"
+      >
+        🚀 우주의 탱크 게임
+        <span className="mt-2 block text-sm font-normal text-slate-300">
+          점프하고 미사일 쏘고 보스 물리치기
+        </span>
+      </Link>
+
       <ConfigBanner />
     </main>
   );
