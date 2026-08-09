@@ -61,6 +61,37 @@ body {
 .slot-empty {
   animation: slot-pulse 2.6s ease-in-out infinite;
 }
+/* 휴대폰 가로 화면: 게임이 화면 높이를 꽉 채우도록.
+   캔버스는 16:9라서 쓸 수 있는 높이로부터 폭을 역산한다. */
+@media (orientation: landscape) and (max-height: 620px) {
+  .game-main {
+    padding: 0.25rem 0.5rem 0;
+    gap: 0.25rem;
+    max-width: none;
+  }
+  .game-topbar {
+    font-size: 11px;
+    gap: 0.25rem;
+  }
+  .game-extra {
+    display: none;
+  }
+  .game-stage {
+    max-width: calc((100dvh - 2.6rem) * 16 / 9);
+    border-width: 2px;
+  }
+}
+
+/* 세로로 들고 있으면 가로로 돌리라고 알려준다 */
+.rotate-hint {
+  display: none;
+}
+@media (orientation: portrait) and (max-width: 820px) {
+  .rotate-hint {
+    display: flex;
+  }
+}
+
 @keyframes pop-in {
   0% { transform: translate(-50%, -50%) scale(0.2); }
   70% { transform: translate(-50%, -50%) scale(1.25); }

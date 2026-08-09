@@ -23,6 +23,13 @@ const KEY_MAP: Record<string, keyof GameInput> = {
   ShiftRight: "guard",
 };
 
+// 화면에 겹쳐 올리는 반투명 조작 버튼.
+// 색은 버튼마다 따로 주므로 여기에는 배경색을 넣지 않는다(Tailwind 클래스가 서로 덮어씀).
+const PAD =
+  "h-[3.25rem] w-[3.25rem] rounded-full border-2 text-xl text-white shadow-lg backdrop-blur-sm";
+const PAD_BIG =
+  "h-16 w-16 rounded-full border-2 text-2xl text-white shadow-lg backdrop-blur-sm";
+
 const INITIAL_HUD: Hud = {
   stage: 1,
   form: "tank",
@@ -75,6 +82,7 @@ function PadButton({
 export default function GamePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<TankGame | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const [hud, setHud] = useState<Hud>(INITIAL_HUD);
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -184,6 +192,14 @@ export default function GamePage() {
     setPaused(false);
   }, []);
 
+  // 휴대폰에서는 주소창이 화면을 잡아먹어서 전체화면이 훨씬 편하다
+  const toggleFullscreen = useCallback(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void el.requestFullscreen?.().catch(() => {});
+  }, []);
+
   // 게임 오버에서 시작 화면으로 돌아가 단계를 다시 고른다
   const backToStart = useCallback(() => {
     gameRef.current?.restart(stagePickRef.current);
@@ -193,9 +209,12 @@ export default function GamePage() {
   }, []);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-3 px-3 py-4">
+    <main
+      ref={mainRef}
+      className="game-main mx-auto flex w-full max-w-5xl flex-1 flex-col gap-3 overscroll-contain px-3 py-4"
+    >
       {/* 상단 정보 */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="game-topbar flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/"
           className="rounded-lg border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100"
@@ -241,11 +260,24 @@ export default function GamePage() {
           >
             {paused ? "▶️" : "⏸️"}
           </button>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="rounded-lg border border-slate-300 px-2 py-1"
+            aria-label="전체화면"
+          >
+            ⛶
+          </button>
         </div>
       </div>
 
-      {/* 게임 화면 */}
-      <div className="relative w-full overflow-hidden rounded-2xl border-4 border-slate-800 bg-slate-900 shadow-lg">
+      {/* 휴대폰을 세로로 들고 있을 때 안내 */}
+      <p className="rotate-hint items-center justify-center gap-2 rounded-xl bg-orange-100 px-3 py-2 text-center text-sm font-bold text-orange-800">
+        🔄 휴대폰을 가로로 돌리면 더 크게 할 수 있어요
+      </p>
+
+      {/* 게임 화면 — 가로 화면에서는 높이에 맞춰 폭이 정해진다(globals.css) */}
+      <div className="game-stage relative mx-auto w-full touch-none overflow-hidden rounded-2xl border-4 border-slate-800 bg-slate-900 shadow-lg">
         <canvas
           ref={canvasRef}
           width={VIEW_W}
@@ -395,9 +427,52 @@ export default function GamePage() {
         )}
       </div>
 
-      {/* 조작 버튼 — 좁은 화면에서 가로로 넘치지 않게 크기를 줄인다.
-          방어는 검사일 때만 나온다 */}
-      <div className="flex items-end justify-between gap-2 sm:gap-3">
+      {/* 반투명 터치 컨트롤러 — 화면 네 모서리에 고정해서 엄지가 닿는 곳에 둔다.
+          왼쪽 = 좌우 이동, 오른쪽 = 방어·점프·공격 */}
+      {started && !paused && hud.phase === "playing" && (
+        <div className="pointer-events-none fixed inset-0 z-30 select-none lg:hidden">
+          <div className="pointer-events-auto absolute bottom-3 left-3 flex items-end gap-3">
+            <PadButton
+              label="◀"
+              onDown={() => set("left", true)}
+              onUp={() => set("left", false)}
+              className={`${PAD} border-white/70 bg-slate-900/30`}
+            />
+            <PadButton
+              label="▶"
+              onDown={() => set("right", true)}
+              onUp={() => set("right", false)}
+              className={`${PAD} border-white/70 bg-slate-900/30`}
+            />
+          </div>
+          <div className="pointer-events-auto absolute bottom-3 right-3 flex items-end gap-3">
+            <PadButton
+              label="🛡️"
+              onDown={() => set("guard", true)}
+              onUp={() => set("guard", false)}
+              className={`${PAD} border-sky-200/80 bg-sky-400/40 ${
+                hud.form === "sword" ? "" : "opacity-35"
+              }`}
+            />
+            <PadButton
+              label="▲"
+              onDown={() => set("jump", true)}
+              onUp={() => set("jump", false)}
+              className={`${PAD} border-blue-200/80 bg-blue-500/45`}
+            />
+            <PadButton
+              label="●"
+              onDown={() => set("fire", true)}
+              onUp={() => set("fire", false)}
+              className={`${PAD_BIG} border-orange-200/90 bg-orange-500/50`}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 화면 아래 조작 버튼 — 큰 화면(PC)용.
+          작은 화면에서는 위의 반투명 컨트롤러를 쓴다 */}
+      <div className="hidden items-end justify-between gap-2 sm:gap-3 lg:flex">
         <div className="flex gap-1.5 sm:gap-2">
           <PadButton
             label="◀"
@@ -440,7 +515,7 @@ export default function GamePage() {
         </div>
       </div>
 
-      <details className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+      <details className="game-extra rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
         <summary className="cursor-pointer font-semibold text-slate-700">
           게임 방법
         </summary>
