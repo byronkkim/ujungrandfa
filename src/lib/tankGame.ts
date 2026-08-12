@@ -614,7 +614,8 @@ export class TankGame {
     this.cool = 0;
     this.charge = 0;
     this.special.left = 0;
-    // 이전 단계에서 죽던 중이었다면 그 대기 상태가 새 단계로 넘어오지 않게 초기화
+    // 이전 단계에서 누르고 있던 입력·대기 상태가 새 단계로 넘어오지 않게 초기화
+    this.input = { ...NO_INPUT };
     this.respawnTimer = 0;
     this.guarding = false;
     this.guardFlash = 0;
@@ -1048,6 +1049,12 @@ export class TankGame {
 
   private killBoss(b: Boss) {
     this.boss = null;
+    // 누르고 있던 입력을 여기서 끊는다. 안 그러면 클리어 화면을 지나 다음 단계에서
+    // 계속 자동으로 공격이 나간다.
+    this.input = { ...NO_INPUT };
+    this.charge = 0;
+    this.special.left = 0;
+    this.cool = 0;
     for (let i = 0; i < 60; i++)
       this.boom(
         b.x + b.w / 2 + (Math.random() - 0.5) * b.w,
@@ -1281,6 +1288,9 @@ export class TankGame {
       }
       this.lives = 0;
       this.phase = "gameover";
+      this.input = { ...NO_INPUT };
+      this.charge = 0;
+      this.special.left = 0;
       this.setToast("게임 오버", 99);
       return;
     }

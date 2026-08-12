@@ -64,7 +64,12 @@ function PadButton({
       type="button"
       onPointerDown={(e) => {
         e.preventDefault();
-        e.currentTarget.setPointerCapture(e.pointerId);
+        // 포인터 캡처가 실패해도 입력은 반드시 들어가야 한다
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* 캡처 불가한 포인터는 그냥 무시 */
+        }
         onDown();
       }}
       onPointerUp={onUp}
@@ -429,8 +434,14 @@ export default function GamePage() {
 
       {/* 반투명 터치 컨트롤러 — 화면 네 모서리에 고정해서 엄지가 닿는 곳에 둔다.
           왼쪽 = 좌우 이동, 오른쪽 = 방어·점프·공격 */}
-      {started && !paused && hud.phase === "playing" && (
-        <div className="pointer-events-none fixed inset-0 z-30 select-none lg:hidden">
+      {/* 버튼을 조건부로 없애면 안 된다 — 누르고 있는 중에 사라지면 손을 떼는 신호를
+          받을 대상이 없어져서 입력이 눌린 채로 남는다(보스 격파 후 자동 공격 버그) */}
+      {started && (
+        <div
+          className={`pointer-events-none fixed inset-0 z-30 select-none transition-opacity lg:hidden ${
+            hud.phase === "playing" && !paused ? "" : "opacity-30"
+          }`}
+        >
           <div className="pointer-events-auto absolute bottom-3 left-3 flex items-end gap-3">
             <PadButton
               label="◀"
