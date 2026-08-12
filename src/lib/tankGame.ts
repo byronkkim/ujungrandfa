@@ -21,6 +21,10 @@ const CHARGE_TIME = 2.0; // 3. 2초 누르면 필살기
 const SPECIAL_GAP = 0.13; // 필살기 3연발 간격
 const ALLY_CHANCE = 0.1; // 6. 10% 확률
 const MAX_ALLIES = 10;
+const ALLY_HP = 20; // 아군 탱크 체력 (단계를 넘어가면 다시 채워짐)
+const ALLY_HIT_CD = 0.5; // 계속 닿아 있어도 0.5초에 한 번만 아프다
+const ALLY_DMG_TOUCH = 1; // 적과 부딪힘
+const ALLY_DMG_BULLET = 3; // 보스 미사일
 
 // 8. 보스: 일반 4뎀×7 = 필살기 7뎀×4 = 28, 섞으면 3배 보너스라 3번
 const BOSS_BASE_HP = 28;
@@ -132,7 +136,14 @@ type Blade = {
 type Bullet = { x: number; y: number; vx: number; vy: number; life: number };
 
 type Enemy = Body & { hp: number; maxHp: number; dir: number; hopCd: number };
-type Ally = Body & { cool: number; offset: number; puff: number };
+type Ally = Body & {
+  cool: number;
+  offset: number;
+  puff: number;
+  hp: number;
+  maxHp: number;
+  hurtCd: number;
+};
 type Boss = Body & {
   hp: number;
   maxHp: number;
@@ -597,11 +608,14 @@ export class TankGame {
     };
 
     if (keepAllies) {
+      // 단계를 넘어가면 아군 탱크 체력이 다시 꽉 찬다
       this.allies.forEach((a, i) => {
         a.x = this.player.x - 50 - i * 12;
         a.y = this.player.y - 20;
         a.vx = 0;
         a.vy = 0;
+        a.hp = a.maxHp;
+        a.hurtCd = 0;
       });
     } else {
       this.allies = [];
@@ -1086,6 +1100,9 @@ export class TankGame {
       cool: 0.4 + Math.random() * 0.8,
       offset: 60 + this.allies.length * 26 + Math.random() * 18,
       puff: 0,
+      hp: ALLY_HP,
+      maxHp: ALLY_HP,
+      hurtCd: 0,
     });
     this.setToast(`아군 탱크 합류! (${this.allies.length}대)`, 1.6);
   }
@@ -1161,11 +1178,29 @@ export class TankGame {
     }
   }
 
+  // 아군 탱크 피해. 체력이 0이 되면 격파된다.
+  private hurtAlly(a: Ally, dmg: number) {
+    if (a.hurtCd > 0) return;
+    a.hurtCd = ALLY_HIT_CD;
+    a.hp -= dmg;
+    this.boom(a.x + a.w / 2, a.y + a.h / 2, "#38bdf8", 6);
+    if (a.hp > 0) return;
+
+    const i = this.allies.indexOf(a);
+    if (i >= 0) this.allies.splice(i, 1);
+    this.boom(a.x + a.w / 2, a.y + a.h / 2, "#0ea5e9", 18);
+    this.boom(a.x + a.w / 2, a.y + a.h / 2, "#e2e8f0", 10);
+    this.sfx.boom();
+    this.setToast(`아군 탱크 격파! (남은 ${this.allies.length}대)`, 1.6);
+  }
+
   private updateAllies(dt: number) {
     const p = this.player;
     const backDir = -p.dir; // 6. 내 뒤쪽으로만 쏜다
 
-    for (const a of this.allies) {
+    for (let i = this.allies.length - 1; i >= 0; i--) {
+      const a = this.allies[i];
+      if (a.hurtCd > 0) a.hurtCd -= dt;
       const targetX = p.x - p.dir * a.offset;
       const dx = targetX - a.x;
       a.vx = clamp(dx * 3.2, -MOVE_SPEED * 1.25, MOVE_SPEED * 1.25);
@@ -1198,6 +1233,14 @@ export class TankGame {
         });
         this.spark(a.x + a.w / 2 + backDir * 26, a.y + 12, "#7dd3fc");
       }
+
+      // 적·보스와 부딪히면 아군도 아프다 (체력 0이면 격파되어 사라진다)
+      if (this.enemies.some((e) => overlap(e, a))) {
+        this.hurtAlly(a, ALLY_DMG_TOUCH);
+        continue;
+      }
+      const boss = this.boss;
+      if (boss && overlap(boss, a)) this.hurtAlly(a, ALLY_DMG_BULLET);
     }
   }
 
@@ -1253,6 +1296,14 @@ export class TankGame {
       if (overlap(box, p)) {
         this.bullets.splice(i, 1);
         this.hurtPlayer(false);
+        continue;
+      }
+      // 보스 미사일은 아군 탱크도 맞힌다
+      const hitAlly = this.allies.find((a) => overlap(box, a));
+      if (hitAlly) {
+        this.bullets.splice(i, 1);
+        this.boom(s.x, s.y, "#ef4444", 5);
+        this.hurtAlly(hitAlly, ALLY_DMG_BULLET);
       }
     }
   }
@@ -1850,8 +1901,22 @@ export class TankGame {
   }
 
   private drawAllies() {
+    const ctx = this.ctx;
     for (const a of this.allies) {
-      this.tank(a.x - this.camX, a.y, a.w, a.h, -this.player.dir, "#38bdf8", "#0369a1");
+      const x = a.x - this.camX;
+      // 다쳤을 때만 체력 막대를 보여준다
+      if (a.hp < a.maxHp) {
+        const w = a.w - 6;
+        ctx.fillStyle = "rgba(15,23,42,0.6)";
+        roundRect(ctx, x + 3, a.y - 10, w, 5, 2.5);
+        ctx.fill();
+        const ratio = Math.max(0, a.hp / a.maxHp);
+        ctx.fillStyle =
+          ratio > 0.5 ? "#38bdf8" : ratio > 0.25 ? "#fbbf24" : "#ef4444";
+        roundRect(ctx, x + 3, a.y - 10, Math.max(2, w * ratio), 5, 2.5);
+        ctx.fill();
+      }
+      this.tank(x, a.y, a.w, a.h, -this.player.dir, "#38bdf8", "#0369a1");
     }
   }
 
