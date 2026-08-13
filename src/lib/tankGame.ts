@@ -20,8 +20,11 @@ const FIRE_COOLDOWN = 0.3; // 5. 0.3초마다 한 발
 const CHARGE_TIME = 2.0; // 3. 2초 누르면 필살기
 const SPECIAL_GAP = 0.13; // 필살기 3연발 간격
 const ALLY_CHANCE = 0.1; // 6. 10% 확률
-const MAX_ALLIES = 10;
+const MAX_ALLIES = 10; // 6. 최대 10대
+const ALLY_PER_STAGE = 2; // 판마다 수용 인원이 2대씩 늘어난다 (1단계 2, 2단계 4, …)
 const ALLY_HP = 20; // 아군 탱크 체력 (단계를 넘어가면 다시 채워짐)
+const ALLY_HP_SEGS = 5; // 머리 위에 5칸으로 표시 (한 칸 = 체력 4)
+const ALLY_HEAL = 10; // 단계를 넘어갈 때 회복하는 양 (전부는 아님)
 const ALLY_HIT_CD = 0.5; // 계속 닿아 있어도 0.5초에 한 번만 아프다
 const ALLY_DMG_TOUCH = 1; // 적과 부딪힘
 const ALLY_DMG_BULLET = 3; // 보스 미사일
@@ -71,6 +74,7 @@ export type Hud = {
   form: PlayerForm;
   lives: number;
   allies: number;
+  allyCap: number; // 이 단계에서 데리고 다닐 수 있는 아군 수
   charge: number; // 0~1
   enemies: number;
   stars: number;
@@ -608,13 +612,13 @@ export class TankGame {
     };
 
     if (keepAllies) {
-      // 단계를 넘어가면 아군 탱크 체력이 다시 꽉 찬다
+      // 단계를 넘어가면 아군 탱크가 체력을 10만큼 회복한다(전부는 아님)
       this.allies.forEach((a, i) => {
         a.x = this.player.x - 50 - i * 12;
         a.y = this.player.y - 20;
         a.vx = 0;
         a.vy = 0;
-        a.hp = a.maxHp;
+        a.hp = Math.min(a.maxHp, a.hp + ALLY_HEAL);
         a.hurtCd = 0;
       });
     } else {
@@ -1084,8 +1088,13 @@ export class TankGame {
     this.setToast(`${this.stage}단계 클리어! 🎉`, 3);
   }
 
+  // 판마다 늘어나는 아군 수용 인원 (1단계 2대, 2단계 4대 … 최대 10대)
+  private allyCapacity() {
+    return Math.min(MAX_ALLIES, this.stage * ALLY_PER_STAGE);
+  }
+
   private maybeAlly() {
-    if (this.allies.length >= MAX_ALLIES) return;
+    if (this.allies.length >= this.allyCapacity()) return;
     if (Math.random() >= ALLY_CHANCE) return; // 6. 10% 확률
     const p = this.player;
     this.allies.push({
@@ -1104,7 +1113,10 @@ export class TankGame {
       maxHp: ALLY_HP,
       hurtCd: 0,
     });
-    this.setToast(`아군 탱크 합류! (${this.allies.length}대)`, 1.6);
+    this.setToast(
+      `아군 탱크 합류! (${this.allies.length}/${this.allyCapacity()}대)`,
+      1.6,
+    );
   }
 
   private updateEnemies(dt: number) {
@@ -1464,6 +1476,7 @@ export class TankGame {
       form: this.form,
       lives: this.lives,
       allies: this.allies.length,
+      allyCap: this.allyCapacity(),
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
@@ -1473,7 +1486,7 @@ export class TankGame {
       phase: this.phase,
       toast: this.toastTimer > 0 ? this.toast : "",
     };
-    const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}|${Math.round(
+    const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
     )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}`;
     if (key === this.hudKey) return;
@@ -1904,17 +1917,21 @@ export class TankGame {
     const ctx = this.ctx;
     for (const a of this.allies) {
       const x = a.x - this.camX;
-      // 다쳤을 때만 체력 막대를 보여준다
-      if (a.hp < a.maxHp) {
-        const w = a.w - 6;
-        ctx.fillStyle = "rgba(15,23,42,0.6)";
-        roundRect(ctx, x + 3, a.y - 10, w, 5, 2.5);
-        ctx.fill();
-        const ratio = Math.max(0, a.hp / a.maxHp);
-        ctx.fillStyle =
-          ratio > 0.5 ? "#38bdf8" : ratio > 0.25 ? "#fbbf24" : "#ef4444";
-        roundRect(ctx, x + 3, a.y - 10, Math.max(2, w * ratio), 5, 2.5);
-        ctx.fill();
+      // 머리 위 체력 5칸 (한 칸 = 체력 4). 항상 보인다.
+      const ratio = Math.max(0, a.hp / a.maxHp);
+      const filled = Math.ceil(ratio * ALLY_HP_SEGS);
+      const segW = 7;
+      const gap = 2;
+      const totalW = ALLY_HP_SEGS * segW + (ALLY_HP_SEGS - 1) * gap;
+      const bx = x + (a.w - totalW) / 2;
+      const by = a.y - 12;
+      const color = ratio > 0.5 ? "#38bdf8" : ratio > 0.25 ? "#fbbf24" : "#ef4444";
+      for (let i = 0; i < ALLY_HP_SEGS; i++) {
+        const sx = bx + i * (segW + gap);
+        ctx.fillStyle = "rgba(15,23,42,0.55)"; // 하늘색 배경에서도 보이게 테두리
+        ctx.fillRect(sx - 1, by - 1, segW + 2, 8);
+        ctx.fillStyle = i < filled ? color : "rgba(226,232,240,0.3)";
+        ctx.fillRect(sx, by, segW, 6);
       }
       this.tank(x, a.y, a.w, a.h, -this.player.dir, "#38bdf8", "#0369a1");
     }

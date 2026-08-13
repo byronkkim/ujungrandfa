@@ -35,6 +35,7 @@ const INITIAL_HUD: Hud = {
   form: "tank",
   lives: 5,
   allies: 0,
+  allyCap: 2,
   charge: 0,
   enemies: 0,
   stars: 0,
@@ -246,7 +247,7 @@ export default function GamePage() {
             ⭐ {hud.stars}
           </span>
           <span className="rounded-lg bg-blue-100 px-2 py-1 text-blue-800">
-            🚙 {hud.allies}/10
+            🚙 {hud.allies}/{hud.allyCap}
           </span>
           <button
             type="button"
