@@ -3,7 +3,8 @@
 // 규칙 요약
 //  - 탱크는 점프 + 좌우로 미사일 발사, 발사 버튼을 2초 누르면 필살기(3연발)
 //  - 미사일은 0.3초에 한 발
-//  - 적을 물리치면 10% 확률로 아군 탱크 합류(최대 10대), 아군은 내 뒤쪽으로만 쏨
+//  - 적을 물리치면 10% 확률로 아군 탱크 합류(수용 인원은 판마다 2대씩 증가),
+//    아군은 내 뒤쪽으로만 쏘고 체력 20을 가진다
 //  - 지형: 평지 / 계단 / 구멍(떨어지면 죽음) / 용암
 //  - 오른쪽 끝의 보스: 일반 7번, 필살기 4번, 섞으면 3번에 격파
 
@@ -20,8 +21,9 @@ const FIRE_COOLDOWN = 0.3; // 5. 0.3초마다 한 발
 const CHARGE_TIME = 2.0; // 3. 2초 누르면 필살기
 const SPECIAL_GAP = 0.13; // 필살기 3연발 간격
 const ALLY_CHANCE = 0.1; // 6. 10% 확률
-const MAX_ALLIES = 10; // 6. 최대 10대
-const ALLY_PER_STAGE = 2; // 판마다 수용 인원이 2대씩 늘어난다 (1단계 2, 2단계 4, …)
+// 판마다 수용 인원이 2대씩 늘어난다 (1단계 2, 2단계 4, … 6단계 12 … 상한 없음)
+const ALLY_PER_STAGE = 2;
+const ALLY_ROW = 8; // 줄줄이 늘어지지 않게 8대마다 같은 간격으로 겹쳐 따라온다
 const ALLY_HP = 20; // 아군 탱크 체력 (단계를 넘어가면 다시 채워짐)
 const ALLY_HP_SEGS = 5; // 머리 위에 5칸으로 표시 (한 칸 = 체력 4)
 const ALLY_HEAL = 10; // 단계를 넘어갈 때 회복하는 양 (전부는 아님)
@@ -1088,9 +1090,9 @@ export class TankGame {
     this.setToast(`${this.stage}단계 클리어! 🎉`, 3);
   }
 
-  // 판마다 늘어나는 아군 수용 인원 (1단계 2대, 2단계 4대 … 최대 10대)
+  // 판마다 늘어나는 아군 수용 인원 (1단계 2대, 2단계 4대, 6단계 12대 … 계속 증가)
   private allyCapacity() {
-    return Math.min(MAX_ALLIES, this.stage * ALLY_PER_STAGE);
+    return this.stage * ALLY_PER_STAGE;
   }
 
   private maybeAlly() {
@@ -1107,7 +1109,8 @@ export class TankGame {
       onGround: false,
       blocked: false,
       cool: 0.4 + Math.random() * 0.8,
-      offset: 60 + this.allies.length * 26 + Math.random() * 18,
+      // 수가 많아져도 화면 밖까지 늘어지지 않게 8대마다 간격을 되돌린다(겹쳐도 됨)
+      offset: 60 + (this.allies.length % ALLY_ROW) * 26 + Math.random() * 18,
       puff: 0,
       hp: ALLY_HP,
       maxHp: ALLY_HP,
