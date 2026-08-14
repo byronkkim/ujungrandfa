@@ -444,6 +444,7 @@ export class TankGame {
   private stage = 1;
   private form: PlayerForm = "tank";
   private lives = START_LIVES;
+  private cheat = false; // 치트키 발동 시 하트 상한이 2배 (탱크 10, 검사 6)
   private phase: Hud["phase"] = "playing";
   private phaseTimer = 0;
   private toast = "";
@@ -539,10 +540,32 @@ export class TankGame {
     this.sfx.muted = m;
   }
 
+  // 하트 상한 (치트키가 켜지면 2배)
+  private maxLives() {
+    const base = this.form === "sword" ? SWORD_LIVES : START_LIVES;
+    return this.cheat ? base * 2 : base;
+  }
+
+  // 🥚 이스터에그 치트키 — 하트 상한을 2배로 (탱크 5→10, 검사 3→6)
+  setCheat(on: boolean) {
+    this.cheat = on;
+    if (!on) return;
+    this.lives = this.maxLives();
+    this.sfx.transform();
+    this.setToast("치트키 발동! 하트 2배 💗", 3);
+    for (let i = 0; i < 30; i++)
+      this.spark(
+        this.player.x + this.player.w / 2,
+        this.player.y,
+        i % 2 ? "#f472b6" : "#fde047",
+      );
+  }
+
   // 원하는 단계부터 시작할 수 있다 (시작 화면에서 고른 단계)
   restart(stage = 1) {
     this.starCount = 0;
     this.form = "tank";
+    this.cheat = false; // 치트키는 한 판에 한 번 — 새 판이면 초기화
     this.allies = [];
     this.loadStage(Math.max(1, Math.round(stage)));
   }
@@ -556,8 +579,8 @@ export class TankGame {
     this.city = generateCity(this.level.length, 4242 + stage);
     this.phase = "playing";
     this.phaseTimer = 0;
-    // 단계마다 하트 다시 채움 (검사는 3개)
-    this.lives = this.form === "sword" ? SWORD_LIVES : START_LIVES;
+    // 단계마다 하트 다시 채움 (검사는 3개, 치트키 발동 시 2배)
+    this.lives = this.maxLives();
 
     const size = PLAYER_SIZE[this.form];
     this.player = {
@@ -1392,7 +1415,7 @@ export class TankGame {
     p.vx = 0;
     p.vy = 0;
     p.invuln = INVULN * 1.8;
-    this.lives = SWORD_LIVES;
+    this.lives = this.maxLives(); // 검사 3 (치트키면 6)
     this.missiles = this.missiles.filter((m) => m.from === "ally");
     this.swings = [];
     this.charge = 0;

@@ -96,6 +96,12 @@ export default function GamePage() {
   // 시작 화면에서 고른 단계 (R키 핸들러에서도 읽어야 해서 ref로도 들고 있는다)
   const [stagePick, setStagePick] = useState(1);
   const stagePickRef = useRef(1);
+  // 🥚 숨겨둔 치트키 — 한 판에 한 번만, 쓰고 나면 화살표가 사라진다
+  const [cheatOpen, setCheatOpen] = useState(false);
+  const [cheatText, setCheatText] = useState("");
+  const [cheatUsed, setCheatUsed] = useState(false);
+  const [cheatMiss, setCheatMiss] = useState(false);
+  const cheatUsedRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -111,6 +117,15 @@ export default function GamePage() {
 
     const onKey = (e: KeyboardEvent, down: boolean) => {
       if (e.repeat) return;
+      // 치트키 입력칸에 타자를 칠 때는 게임 조작으로 먹지 않게 한다
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.isContentEditable)
+      )
+        return;
       const action = KEY_MAP[e.code];
       if (action) {
         e.preventDefault();
@@ -169,10 +184,31 @@ export default function GamePage() {
     if (!game) return;
     game.enableAudio();
     game.restart(stagePickRef.current);
+    // 시작 화면에서 미리 입력해둔 치트키는 그대로 이어간다
+    if (cheatUsedRef.current) game.setCheat(true);
     game.setPaused(false);
     setStarted(true);
     setPaused(false);
   }, []);
+
+  // 치트키 제출 — 맞으면 발동하고 화살표가 사라진다. 틀리면 다시 해볼 수 있다.
+  const submitCheat = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (cheatText.replace(/\s/g, "") === "이재온") {
+        gameRef.current?.setCheat(true);
+        cheatUsedRef.current = true;
+        setCheatUsed(true);
+        setCheatOpen(false);
+        setCheatText("");
+        setCheatMiss(false);
+      } else {
+        setCheatMiss(true);
+        setCheatText("");
+      }
+    },
+    [cheatText],
+  );
 
   const togglePause = useCallback(() => {
     const game = gameRef.current;
@@ -192,11 +228,21 @@ export default function GamePage() {
     });
   }, []);
 
+  // 새 판이므로 치트키도 초기화 (화살표가 다시 나타난다)
+  const resetCheat = useCallback(() => {
+    cheatUsedRef.current = false;
+    setCheatUsed(false);
+    setCheatOpen(false);
+    setCheatText("");
+    setCheatMiss(false);
+  }, []);
+
   const restart = useCallback(() => {
     gameRef.current?.restart(stagePickRef.current);
     gameRef.current?.setPaused(false);
     setPaused(false);
-  }, []);
+    resetCheat();
+  }, [resetCheat]);
 
   // 휴대폰에서는 주소창이 화면을 잡아먹어서 전체화면이 훨씬 편하다
   const toggleFullscreen = useCallback(() => {
@@ -212,7 +258,8 @@ export default function GamePage() {
     gameRef.current?.setPaused(true);
     setStarted(false);
     setPaused(false);
-  }, []);
+    resetCheat();
+  }, [resetCheat]);
 
   return (
     <main
@@ -240,8 +287,13 @@ export default function GamePage() {
           >
             {hud.form === "sword" ? "🗡️ 검사" : "🛡️ 탱크"}
           </span>
+          {/* 치트키로 하트가 많아지면 이모지를 줄줄이 늘어놓지 않고 숫자로 */}
           <span aria-label={`남은 하트 ${hud.lives}개`}>
-            {"❤️".repeat(hud.lives) || "💀"}
+            {hud.lives === 0
+              ? "💀"
+              : hud.lives > 5
+                ? `❤️ ×${hud.lives}`
+                : "❤️".repeat(hud.lives)}
           </span>
           <span className="rounded-lg bg-yellow-100 px-2 py-1 text-yellow-800">
             ⭐ {hud.stars}
@@ -274,8 +326,45 @@ export default function GamePage() {
           >
             ⛶
           </button>
+          {/* 🥚 숨겨둔 치트키 화살표 — 한 번 쓰면 사라진다 */}
+          {!cheatUsed && (
+            <button
+              type="button"
+              onClick={() => setCheatOpen((v) => !v)}
+              className="px-1 text-slate-400 opacity-40 transition hover:opacity-100"
+              aria-label="비밀"
+            >
+              {cheatOpen ? "▲" : "▼"}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* 🥚 치트키 입력칸 (화살표를 눌렀을 때만) */}
+      {cheatOpen && !cheatUsed && (
+        <form
+          onSubmit={submitCheat}
+          className="flex items-center justify-end gap-2"
+        >
+          <input
+            type="text"
+            value={cheatText}
+            onChange={(e) => setCheatText(e.target.value)}
+            placeholder="비밀 낱말"
+            autoFocus
+            className="w-36 rounded-lg border-2 border-slate-300 px-3 py-1 text-sm text-slate-800 outline-none focus:border-orange-400"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-orange-600"
+          >
+            제출
+          </button>
+          {cheatMiss && (
+            <span className="text-sm font-bold text-slate-400">땡! 🙅</span>
+          )}
+        </form>
+      )}
 
       {/* 휴대폰을 세로로 들고 있을 때 안내 */}
       <p className="rotate-hint items-center justify-center gap-2 rounded-xl bg-orange-100 px-3 py-2 text-center text-sm font-bold text-orange-800">
