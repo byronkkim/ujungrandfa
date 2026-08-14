@@ -36,6 +36,7 @@ const INITIAL_HUD: Hud = {
   lives: 5,
   allies: 0,
   allyCap: 2,
+  hard: false,
   charge: 0,
   enemies: 0,
   stars: 0,
@@ -102,6 +103,9 @@ export default function GamePage() {
   const [cheatUsed, setCheatUsed] = useState(false);
   const [cheatMiss, setCheatMiss] = useState(false);
   const cheatUsedRef = useRef(false);
+  // 고수 모드 (시작 화면에서 체크)
+  const [hardMode, setHardMode] = useState(false);
+  const hardModeRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -179,10 +183,19 @@ export default function GamePage() {
     gameRef.current?.restart(n);
   }, []);
 
+  // 고수 모드는 판을 새로 만들어야 적·보스 체력에 반영된다
+  const toggleHardMode = useCallback((on: boolean) => {
+    hardModeRef.current = on;
+    setHardMode(on);
+    gameRef.current?.setHardMode(on);
+    gameRef.current?.restart(stagePickRef.current);
+  }, []);
+
   const play = useCallback(() => {
     const game = gameRef.current;
     if (!game) return;
     game.enableAudio();
+    game.setHardMode(hardModeRef.current);
     game.restart(stagePickRef.current);
     // 시작 화면에서 미리 입력해둔 치트키는 그대로 이어간다
     if (cheatUsedRef.current) game.setCheat(true);
@@ -278,6 +291,11 @@ export default function GamePage() {
           <span className="rounded-lg bg-orange-100 px-2 py-1 text-orange-800">
             {hud.stage}단계
           </span>
+          {hud.hard && (
+            <span className="rounded-lg bg-red-100 px-2 py-1 text-red-800">
+              😈 고수
+            </span>
+          )}
           <span
             className={`rounded-lg px-2 py-1 ${
               hud.form === "sword"
@@ -457,6 +475,26 @@ export default function GamePage() {
             <p className="hidden text-[11px] text-slate-400 sm:block">
               단계가 높으면 적과 보스가 더 강해요
             </p>
+
+            {/* 고수 모드 */}
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-[11px] font-bold transition sm:text-sm ${
+                hardMode
+                  ? "border-red-400 bg-red-500/25 text-red-200"
+                  : "border-slate-500 bg-slate-800/70 text-slate-300"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={hardMode}
+                onChange={(e) => toggleHardMode(e.target.checked)}
+                className="h-4 w-4 accent-red-500"
+              />
+              😈 고수 모드
+              <span className="font-normal opacity-80">
+                한 대만 맞아도 끝!
+              </span>
+            </label>
 
             <button
               type="button"

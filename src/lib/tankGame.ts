@@ -44,6 +44,11 @@ const INVULN = 1.6;
 
 // 하트가 다 떨어지면 검사로 바뀐다. 공격력은 탱크와 같고 체력만 3.
 const SWORD_LIVES = 3;
+
+// 고수 모드 — 탱크도 검사도 한 대만 맞으면 끝, 적 체력 상한과 보스가 크게 오른다
+const HARD_LIVES = 1;
+const HARD_ENEMY_HP_CAP = 9; // 보통은 3
+const HARD_BOSS_MULT = 5; // 보스 체력 5배
 const SWING_LIFE = 0.16; // 검을 휘두르는 시간
 // 검이 닿는 거리. 근접이라 붙어야 하지만, 보스 몸통에 깔리지 않을 만큼은 준다.
 const SWING_REACH = 72;
@@ -77,6 +82,7 @@ export type Hud = {
   lives: number;
   allies: number;
   allyCap: number; // 이 단계에서 데리고 다닐 수 있는 아군 수
+  hard: boolean; // 고수 모드
   charge: number; // 0~1
   enemies: number;
   stars: number;
@@ -445,6 +451,7 @@ export class TankGame {
   private form: PlayerForm = "tank";
   private lives = START_LIVES;
   private cheat = false; // 치트키 발동 시 하트 상한이 2배 (탱크 10, 검사 6)
+  private hard = false; // 고수 모드: 한 대만 맞아도 끝, 적·보스가 훨씬 강함
   private phase: Hud["phase"] = "playing";
   private phaseTimer = 0;
   private toast = "";
@@ -540,9 +547,18 @@ export class TankGame {
     this.sfx.muted = m;
   }
 
-  // 하트 상한 (치트키가 켜지면 2배)
+  // 고수 모드 켜고 끄기 (시작 화면에서만 바꾼다 — restart보다 먼저 부를 것)
+  setHardMode(on: boolean) {
+    this.hard = on;
+  }
+
+  // 하트 상한. 고수 모드는 1대만 맞아도 끝(치트키를 쓰면 2대).
   private maxLives() {
-    const base = this.form === "sword" ? SWORD_LIVES : START_LIVES;
+    const base = this.hard
+      ? HARD_LIVES
+      : this.form === "sword"
+        ? SWORD_LIVES
+        : START_LIVES;
     return this.cheat ? base * 2 : base;
   }
 
@@ -601,7 +617,8 @@ export class TankGame {
 
     this.starPickups = this.level.stars.map((s) => ({ ...s, taken: false }));
 
-    const ehp = Math.min(stage, 3); // 9. 단계가 오르면 적이 더 튼튼해진다
+    // 9. 단계가 오르면 적이 더 튼튼해진다 (고수 모드는 9까지)
+    const ehp = Math.min(stage, this.hard ? HARD_ENEMY_HP_CAP : 3);
     this.enemies = this.level.spawns.map((s) => ({
       x: s.x,
       y: s.y,
@@ -617,7 +634,9 @@ export class TankGame {
       hopCd: 0,
     }));
 
-    const bossMax = Math.round(BOSS_BASE_HP * (1 + 0.5 * (stage - 1)));
+    const bossMax = Math.round(
+      BOSS_BASE_HP * (1 + 0.5 * (stage - 1)) * (this.hard ? HARD_BOSS_MULT : 1),
+    );
     this.boss = {
       x: this.level.bossX,
       y: this.level.bossY - 118,
@@ -1294,7 +1313,7 @@ export class TankGame {
     b.dir = p.x < b.x ? -1 : 1;
     const homeL = this.level.bossX - 300;
     const homeR = this.level.bossX + 260;
-    const speed = 60 + this.stage * 10;
+    const speed = (60 + this.stage * 10) * (this.hard ? 1.4 : 1);
     b.vx = b.dir * speed;
     if (b.x < homeL) b.vx = Math.abs(b.vx);
     if (b.x > homeR) b.vx = -Math.abs(b.vx);
@@ -1302,7 +1321,9 @@ export class TankGame {
 
     b.shootCd -= dt;
     if (b.shootCd <= 0) {
-      b.shootCd = Math.max(0.9, 1.9 - this.stage * 0.15);
+      b.shootCd = this.hard
+        ? Math.max(0.5, 1.2 - this.stage * 0.1)
+        : Math.max(0.9, 1.9 - this.stage * 0.15);
       const ox = b.x + b.w / 2 + b.dir * 60;
       const oy = b.y + 46;
       for (const vy of [-170, 0, 170]) {
@@ -1503,6 +1524,7 @@ export class TankGame {
       lives: this.lives,
       allies: this.allies.length,
       allyCap: this.allyCapacity(),
+      hard: this.hard,
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
