@@ -580,7 +580,8 @@ export class TankGame {
   // 원하는 단계부터 시작할 수 있다 (시작 화면에서 고른 단계)
   restart(stage = 1) {
     this.starCount = 0;
-    this.form = "tank";
+    // 고수 모드는 탱크 없이 바로 전사로 시작한다
+    this.form = this.hard ? "sword" : "tank";
     this.cheat = false; // 치트키는 한 판에 한 번 — 새 판이면 초기화
     this.allies = [];
     this.loadStage(Math.max(1, Math.round(stage)));
@@ -737,7 +738,12 @@ export class TankGame {
   /* ---------------- 업데이트 ---------------- */
 
   private update(dt: number) {
-    if (this.paused) return;
+    // 멈춰 있어도 화면 정보는 계속 알려준다.
+    // (안 그러면 게임오버 → 단계 고르기로 돌아갔을 때 게임오버 화면이 안 사라진다)
+    if (this.paused) {
+      this.pushHud();
+      return;
+    }
     this.time += dt;
     if (this.toastTimer > 0) this.toastTimer -= dt;
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 26);
@@ -866,6 +872,7 @@ export class TankGame {
         this.cool = FIRE_COOLDOWN;
         this.attack("normal", p.dir, this.salvoSeq++);
       }
+      if (this.hard) return; // 고수 모드에는 필살기가 없다
       this.charge = Math.min(CHARGE_TIME, this.charge + dt);
       if (this.charge >= CHARGE_TIME) {
         this.charge = 0;

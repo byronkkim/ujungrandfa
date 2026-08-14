@@ -30,6 +30,9 @@ const PAD =
 const PAD_BIG =
   "h-16 w-16 rounded-full border-2 text-2xl text-white shadow-lg backdrop-blur-sm";
 
+// 고수 모드를 켜면 이 단계부터 시작한다
+const HARD_START_STAGE = 7;
+
 const INITIAL_HUD: Hud = {
   stage: 1,
   form: "tank",
@@ -183,10 +186,15 @@ export default function GamePage() {
     gameRef.current?.restart(n);
   }, []);
 
-  // 고수 모드는 판을 새로 만들어야 적·보스 체력에 반영된다
+  // 고수 모드는 판을 새로 만들어야 적·보스 체력에 반영된다.
+  // 켜면 시작 단계도 7단계로 맞춰준다(원하면 다시 고를 수 있음).
   const toggleHardMode = useCallback((on: boolean) => {
     hardModeRef.current = on;
     setHardMode(on);
+    if (on) {
+      stagePickRef.current = HARD_START_STAGE;
+      setStagePick(HARD_START_STAGE);
+    }
     gameRef.current?.setHardMode(on);
     gameRef.current?.restart(stagePickRef.current);
   }, []);
@@ -492,7 +500,7 @@ export default function GamePage() {
               />
               😈 고수 모드
               <span className="font-normal opacity-80">
-                한 대만 맞아도 끝!
+                전사로 시작 · 한 대면 끝 · 필살기 없음
               </span>
             </label>
 
@@ -660,6 +668,11 @@ export default function GamePage() {
         </summary>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>시작 화면에서 <b>1~10단계</b> 중 원하는 단계를 골라 시작할 수 있어요.</li>
+          <li>
+            😈 <b>고수 모드</b>: 탱크 없이 <b>바로 전사로</b> 시작하고,
+            <b> 한 대만 맞아도 게임 오버</b>예요. <b>필살기도 없어요.</b> 적은
+            체력이 9까지, 보스는 5배로 세지고, 켜면 <b>7단계부터</b> 시작해요.
+          </li>
           <li>
             키보드: ← → 이동, Space/↑ 점프, X 발사, <b>Shift(또는 ↓ · S · C) 방어</b>,
             R 고른 단계부터 다시
