@@ -45,6 +45,11 @@ const INVULN = 1.6;
 // 하트가 다 떨어지면 검사로 바뀐다. 공격력은 탱크와 같고 체력만 3.
 const SWORD_LIVES = 3;
 
+// 튜토리얼 모드 — 기본 조작을 하나씩 알려주고, 고른 단계를 깰 수 있게 도와준다
+const TUTORIAL_LIVES = 10; // 하트를 넉넉하게
+const TUTORIAL_MOVE_HINT = 120; // 이만큼 오른쪽으로 가면 "이동" 배운 것으로 친다
+const AUTO_FIRE_COOLDOWN = 0.45; // 자동 사격 간격 (직접 쏘는 0.3초보다 느리게)
+
 // 고수 모드 — 탱크도 검사도 한 대만 맞으면 끝, 적 체력 상한과 보스가 크게 오른다
 const HARD_LIVES = 1;
 const HARD_ENEMY_HP_CAP = 9; // 보통은 3
@@ -83,6 +88,8 @@ export type Hud = {
   allies: number;
   allyCap: number; // 이 단계에서 데리고 다닐 수 있는 아군 수
   hard: boolean; // 고수 모드
+  tutorial: boolean; // 튜토리얼 모드
+  tutorialText: string; // 지금 알려줄 내용
   charge: number; // 0~1
   enemies: number;
   stars: number;
@@ -452,6 +459,18 @@ export class TankGame {
   private lives = START_LIVES;
   private cheat = false; // 치트키 발동 시 하트 상한이 2배 (탱크 10, 검사 6)
   private hard = false; // 고수 모드: 한 대만 맞아도 끝, 적·보스가 훨씬 강함
+  private tutorial = false; // 튜토리얼 모드: 조작을 하나씩 알려주고 쉽게 만들어 준다
+  private tut = {
+    moved: false,
+    jumped: false,
+    attacked: false,
+    special: false,
+    star: false,
+    boss: false,
+    cleared: false,
+  };
+  private tutStartX = 0;
+  private autoFireCd = 0;
   private phase: Hud["phase"] = "playing";
   private phaseTimer = 0;
   private toast = "";
@@ -550,15 +569,38 @@ export class TankGame {
   // 고수 모드 켜고 끄기 (시작 화면에서만 바꾼다 — restart보다 먼저 부를 것)
   setHardMode(on: boolean) {
     this.hard = on;
+    if (on) this.tutorial = false; // 둘은 같이 켤 수 없다
   }
 
-  // 하트 상한. 고수 모드는 1대만 맞아도 끝(치트키를 쓰면 2대).
+  setTutorial(on: boolean) {
+    this.tutorial = on;
+    if (on) this.hard = false;
+  }
+
+  // 지금 알려줄 내용 (하나씩 해보면 다음으로 넘어간다)
+  private tutorialMessage() {
+    if (!this.tutorial) return "";
+    const t = this.tut;
+    if (!t.moved) return "① ▶ 버튼(또는 → 키)으로 오른쪽으로 가볼까요?";
+    if (!t.jumped) return "② ▲ 버튼(또는 Space)을 눌러 점프!";
+    if (!t.attacked) return "③ ● 버튼(또는 X 키)으로 적을 공격!";
+    if (!t.special) return "④ 발사 버튼을 2초 꾹 누르면 필살기가 나가요!";
+    if (!t.star) return "⑤ 구멍과 용암은 점프로 넘고, 하늘의 ⭐도 모아봐요";
+    if (!t.boss) return "⑥ 오른쪽 끝까지 가면 보스가 기다려요!";
+    if (!t.cleared)
+      return "⑦ 일반 공격과 필살기를 번갈아 쏘면 보스가 3번에 쓰러져요!";
+    return "🎉 다 배웠어요! 정말 잘했어요!";
+  }
+
+  // 하트 상한. 고수 모드는 1대, 튜토리얼은 넉넉하게(치트키를 쓰면 2배).
   private maxLives() {
     const base = this.hard
       ? HARD_LIVES
-      : this.form === "sword"
-        ? SWORD_LIVES
-        : START_LIVES;
+      : this.tutorial
+        ? TUTORIAL_LIVES
+        : this.form === "sword"
+          ? SWORD_LIVES
+          : START_LIVES;
     return this.cheat ? base * 2 : base;
   }
 
@@ -617,9 +659,22 @@ export class TankGame {
     this.safe = { x: 80, y: 300 };
 
     this.starPickups = this.level.stars.map((s) => ({ ...s, taken: false }));
+    // 튜토리얼 진행 상황 초기화
+    this.tutStartX = this.player.x;
+    this.tut = {
+      moved: false,
+      jumped: false,
+      attacked: false,
+      special: false,
+      star: false,
+      boss: false,
+      cleared: false,
+    };
 
-    // 9. 단계가 오르면 적이 더 튼튼해진다 (고수 모드는 9까지)
-    const ehp = Math.min(stage, this.hard ? HARD_ENEMY_HP_CAP : 3);
+    // 9. 단계가 오르면 적이 더 튼튼해진다 (고수 모드는 9까지, 튜토리얼은 항상 1)
+    const ehp = this.tutorial
+      ? 1
+      : Math.min(stage, this.hard ? HARD_ENEMY_HP_CAP : 3);
     this.enemies = this.level.spawns.map((s) => ({
       x: s.x,
       y: s.y,
@@ -635,9 +690,14 @@ export class TankGame {
       hopCd: 0,
     }));
 
-    const bossMax = Math.round(
-      BOSS_BASE_HP * (1 + 0.5 * (stage - 1)) * (this.hard ? HARD_BOSS_MULT : 1),
-    );
+    // 튜토리얼에서는 고른 단계가 높아도 보스를 1단계 세기로 낮춰 깰 수 있게 돕는다
+    const bossMax = this.tutorial
+      ? BOSS_BASE_HP
+      : Math.round(
+          BOSS_BASE_HP *
+            (1 + 0.5 * (stage - 1)) *
+            (this.hard ? HARD_BOSS_MULT : 1),
+        );
     this.boss = {
       x: this.level.bossX,
       y: this.level.bossY - 118,
@@ -794,9 +854,12 @@ export class TankGame {
     p.vx = this.guarding ? 0 : dirIn * MOVE_SPEED;
     if (dirIn !== 0 && !this.guarding) p.dir = dirIn;
 
+    if (p.x > this.tutStartX + TUTORIAL_MOVE_HINT) this.tut.moved = true;
+
     if (this.input.jump && p.onGround && !this.guarding) {
       p.vy = JUMP_V;
       p.onGround = false;
+      this.tut.jumped = true;
       this.sfx.jump();
       for (let i = 0; i < 6; i++) this.puff(p.x + p.w / 2, p.y + p.h);
     }
@@ -846,14 +909,39 @@ export class TankGame {
       if (Math.abs(s.y - (p.y + p.h / 2)) > 40) continue;
       s.taken = true;
       this.starCount += 1;
+      this.tut.star = true;
       this.sfx.star();
       for (let i = 0; i < 10; i++) this.spark(s.x, s.y, "#fde047");
     }
   }
 
+  // 튜토리얼에서는 앞에 적이 있으면 알아서 쏴 준다 (조작이 서툴러도 깰 수 있게)
+  private tutorialAutoFire(dt: number) {
+    if (!this.tutorial) return;
+    this.autoFireCd -= dt;
+    if (this.autoFireCd > 0 || this.guarding || this.special.left > 0) return;
+
+    const p = this.player;
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+    const inFront = (bx: number, by: number, bw: number, bh: number) => {
+      const dx = bx + bw / 2 - cx;
+      if (Math.sign(dx) !== p.dir || Math.abs(dx) > 520) return false;
+      return Math.abs(by + bh / 2 - cy) < 90;
+    };
+    const target =
+      this.enemies.some((e) => inFront(e.x, e.y, e.w, e.h)) ||
+      (this.boss ? inFront(this.boss.x, this.boss.y, this.boss.w, this.boss.h) : false);
+    if (!target) return;
+
+    this.autoFireCd = AUTO_FIRE_COOLDOWN;
+    this.attack("normal", p.dir, this.salvoSeq++);
+  }
+
   private updateWeapons(dt: number) {
     const p = this.player;
     if (this.cool > 0) this.cool -= dt;
+    this.tutorialAutoFire(dt);
 
     // 필살기 3연발 (탱크는 미사일 3발, 검사는 검 3번) — 셋 다 salvo가 같아서
     // 보스에게는 "필살기 한 번"으로 계산된다
@@ -870,6 +958,7 @@ export class TankGame {
       // 눌린 동안 0.3초마다 한 번 + 충전
       if (this.cool <= 0 && this.special.left === 0) {
         this.cool = FIRE_COOLDOWN;
+        this.tut.attacked = true; // 직접 눌러서 쏜 것만 "배웠다"로 친다
         this.attack("normal", p.dir, this.salvoSeq++);
       }
       if (this.hard) return; // 고수 모드에는 필살기가 없다
@@ -881,6 +970,7 @@ export class TankGame {
         this.special.timer = 0;
         this.special.dir = p.dir;
         this.special.salvo = this.salvoSeq++;
+        this.tut.special = true;
         this.setToast("필살기 발사!", 1.2);
       }
     } else {
@@ -1118,6 +1208,7 @@ export class TankGame {
 
   private killBoss(b: Boss) {
     this.boss = null;
+    this.tut.cleared = true;
     // 누르고 있던 입력을 여기서 끊는다. 안 그러면 클리어 화면을 지나 다음 단계에서
     // 계속 자동으로 공격이 나간다.
     this.input = { ...NO_INPUT };
@@ -1316,6 +1407,7 @@ export class TankGame {
 
     const awake = p.x > b.x - VIEW_W * 0.7;
     if (!awake) return;
+    this.tut.boss = true;
 
     b.dir = p.x < b.x ? -1 : 1;
     const homeL = this.level.bossX - 300;
@@ -1390,6 +1482,19 @@ export class TankGame {
     // 검사가 막고 있으면 일반 피해는 통하지 않는다
     if (this.guarding && !fatal) {
       this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
+      return;
+    }
+
+    // 튜토리얼에서는 구멍·용암에 빠져도 하트를 잃지 않고 다시 시작한다
+    if (this.tutorial && fatal) {
+      p.x = this.safe.x;
+      p.y = this.safe.y - p.h;
+      p.vx = 0;
+      p.vy = 0;
+      p.invuln = INVULN;
+      this.respawnTimer = 0.7;
+      this.sfx.hurt();
+      this.setToast("괜찮아요! 다시 해봐요 💪", 1.6);
       return;
     }
     this.lives -= 1;
@@ -1532,6 +1637,8 @@ export class TankGame {
       allies: this.allies.length,
       allyCap: this.allyCapacity(),
       hard: this.hard,
+      tutorial: this.tutorial,
+      tutorialText: this.tutorialMessage(),
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
@@ -1543,7 +1650,7 @@ export class TankGame {
     };
     const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
-    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}`;
+    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);

@@ -40,6 +40,8 @@ const INITIAL_HUD: Hud = {
   allies: 0,
   allyCap: 2,
   hard: false,
+  tutorial: false,
+  tutorialText: "",
   charge: 0,
   enemies: 0,
   stars: 0,
@@ -109,6 +111,9 @@ export default function GamePage() {
   // 고수 모드 (시작 화면에서 체크)
   const [hardMode, setHardMode] = useState(false);
   const hardModeRef = useRef(false);
+  // 튜토리얼 모드 (고수 모드와 동시에 켤 수 없다)
+  const [tutorial, setTutorial] = useState(false);
+  const tutorialRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -192,10 +197,23 @@ export default function GamePage() {
     hardModeRef.current = on;
     setHardMode(on);
     if (on) {
+      tutorialRef.current = false;
+      setTutorial(false);
       stagePickRef.current = HARD_START_STAGE;
       setStagePick(HARD_START_STAGE);
     }
     gameRef.current?.setHardMode(on);
+    gameRef.current?.restart(stagePickRef.current);
+  }, []);
+
+  const toggleTutorial = useCallback((on: boolean) => {
+    tutorialRef.current = on;
+    setTutorial(on);
+    if (on) {
+      hardModeRef.current = false;
+      setHardMode(false);
+    }
+    gameRef.current?.setTutorial(on);
     gameRef.current?.restart(stagePickRef.current);
   }, []);
 
@@ -204,6 +222,7 @@ export default function GamePage() {
     if (!game) return;
     game.enableAudio();
     game.setHardMode(hardModeRef.current);
+    game.setTutorial(tutorialRef.current);
     game.restart(stagePickRef.current);
     // 시작 화면에서 미리 입력해둔 치트키는 그대로 이어간다
     if (cheatUsedRef.current) game.setCheat(true);
@@ -302,6 +321,11 @@ export default function GamePage() {
           {hud.hard && (
             <span className="rounded-lg bg-red-100 px-2 py-1 text-red-800">
               😈 고수
+            </span>
+          )}
+          {hud.tutorial && (
+            <span className="rounded-lg bg-emerald-100 px-2 py-1 text-emerald-800">
+              🎓 튜토리얼
             </span>
           )}
           <span
@@ -437,6 +461,19 @@ export default function GamePage() {
           </div>
         )}
 
+        {/* 🎓 튜토리얼 안내 — 하나씩 해보면 다음 내용으로 넘어간다 */}
+        {started && hud.tutorial && hud.tutorialText && (
+          <div
+            className={`pointer-events-none absolute inset-x-0 mx-auto w-[92%] max-w-md ${
+              hud.bossActive ? "top-14" : "top-2"
+            }`}
+          >
+            <p className="rounded-xl border-2 border-emerald-300/70 bg-emerald-900/80 px-3 py-2 text-center text-[11px] font-bold leading-snug text-emerald-50 shadow-lg sm:text-sm">
+              {hud.tutorialText}
+            </p>
+          </div>
+        )}
+
         {/* 알림 */}
         {hud.toast && hud.phase === "playing" && (
           <div className="pointer-events-none absolute inset-x-0 top-16 text-center">
@@ -483,6 +520,26 @@ export default function GamePage() {
             <p className="hidden text-[11px] text-slate-400 sm:block">
               단계가 높으면 적과 보스가 더 강해요
             </p>
+
+            {/* 튜토리얼 모드 */}
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-[11px] font-bold transition sm:text-sm ${
+                tutorial
+                  ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
+                  : "border-slate-500 bg-slate-800/70 text-slate-300"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={tutorial}
+                onChange={(e) => toggleTutorial(e.target.checked)}
+                className="h-4 w-4 accent-emerald-500"
+              />
+              🎓 튜토리얼
+              <span className="font-normal opacity-80">
+                알려주고 · 자동으로 쏴주고 · 도와줘요
+              </span>
+            </label>
 
             {/* 고수 모드 */}
             <label
