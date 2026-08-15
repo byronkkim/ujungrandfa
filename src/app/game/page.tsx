@@ -108,6 +108,9 @@ export default function GamePage() {
   const [cheatUsed, setCheatUsed] = useState(false);
   const [cheatMiss, setCheatMiss] = useState(false);
   const cheatUsedRef = useRef(false);
+  // 화살표는 3번 연속 눌러야 열린다 (아는 사람만 열 수 있게)
+  const cheatTapsRef = useRef(0);
+  const cheatTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 고수 모드 (시작 화면에서 체크)
   const [hardMode, setHardMode] = useState(false);
   const hardModeRef = useRef(false);
@@ -229,6 +232,19 @@ export default function GamePage() {
     game.setPaused(false);
     setStarted(true);
     setPaused(false);
+  }, []);
+
+  // 숨겨둔 화살표 — 1.5초 안에 3번 눌러야 입력칸이 열린다
+  const tapCheatArrow = useCallback(() => {
+    cheatTapsRef.current += 1;
+    if (cheatTapTimerRef.current) clearTimeout(cheatTapTimerRef.current);
+    cheatTapTimerRef.current = setTimeout(() => {
+      cheatTapsRef.current = 0;
+    }, 1500);
+    if (cheatTapsRef.current >= 3) {
+      cheatTapsRef.current = 0;
+      setCheatOpen((v) => !v);
+    }
   }, []);
 
   // 치트키 제출 — 맞으면 발동하고 화살표가 사라진다. 틀리면 다시 해볼 수 있다.
@@ -376,12 +392,13 @@ export default function GamePage() {
           >
             ⛶
           </button>
-          {/* 🥚 숨겨둔 치트키 화살표 — 한 번 쓰면 사라진다 */}
+          {/* 🥚 아주 깊이 숨겨둔 치트키 화살표.
+              거의 안 보이고, 1.5초 안에 3번 눌러야 열린다. 한 번 쓰면 사라진다 */}
           {!cheatUsed && (
             <button
               type="button"
-              onClick={() => setCheatOpen((v) => !v)}
-              className="px-1 text-slate-400 opacity-40 transition hover:opacity-100"
+              onClick={tapCheatArrow}
+              className="px-0.5 text-[9px] leading-none text-slate-400 opacity-[0.07] transition hover:opacity-100"
               aria-label="비밀"
             >
               {cheatOpen ? "▲" : "▼"}
