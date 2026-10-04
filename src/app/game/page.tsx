@@ -2,7 +2,22 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TankGame, VIEW_H, VIEW_W, type GameInput, type Hud } from "@/lib/tankGame";
+import {
+  SHOP_GOODS,
+  TankGame,
+  VIEW_H,
+  VIEW_W,
+  type GameInput,
+  type Hud,
+  type ShopKind,
+} from "@/lib/tankGame";
+
+// 상점 분류별 제목
+const SHOP_SECTIONS: { kind: ShopKind; title: string }[] = [
+  { kind: "item", title: "🎒 아이템" },
+  { kind: "loot", title: "🏆 전리품" },
+  { kind: "food", title: "🍗 회복음식" },
+];
 
 const KEY_MAP: Record<string, keyof GameInput> = {
   ArrowLeft: "left",
@@ -45,6 +60,9 @@ const INITIAL_HUD: Hud = {
   hard: false,
   tutorial: false,
   tutorialText: "",
+  shieldOwned: 0,
+  shieldCharges: 0,
+  bought: [],
   charge: 0,
   enemies: 0,
   stars: 0,
@@ -151,6 +169,7 @@ export default function GamePage() {
         game.setInput({ [action]: down });
         return;
       }
+      if (down && e.code === "KeyM") game.useItem(); // 🎒 아이템 쓰기
       if (down && e.code === "KeyR") game.restart(stagePickRef.current);
     };
     const kd = (e: KeyboardEvent) => onKey(e, true);
@@ -299,6 +318,18 @@ export default function GamePage() {
     setCheatMiss(false);
   }, []);
 
+  // 🏪 상점에서 사기 / 나가기, 🎒 아이템 쓰기
+  const buy = useCallback((id: string) => {
+    gameRef.current?.buy(id);
+  }, []);
+  const leaveShop = useCallback(() => {
+    gameRef.current?.leaveShop();
+  }, []);
+  const useItem = useCallback(() => {
+    gameRef.current?.enableAudio();
+    gameRef.current?.useItem();
+  }, []);
+
   const restart = useCallback(() => {
     gameRef.current?.restart(stagePickRef.current);
     gameRef.current?.setPaused(false);
@@ -370,6 +401,14 @@ export default function GamePage() {
           <span className="rounded-lg bg-yellow-100 px-2 py-1 text-yellow-800">
             ⭐ {hud.stars}
           </span>
+          {(hud.shieldOwned > 0 || hud.shieldCharges > 0) && (
+            <span className="rounded-lg bg-sky-100 px-2 py-1 text-sky-800">
+              🛡️{" "}
+              {hud.shieldCharges > 0
+                ? `켜짐 ${hud.shieldCharges}`
+                : hud.shieldOwned}
+            </span>
+          )}
           <span className="rounded-lg bg-blue-100 px-2 py-1 text-blue-800">
             🚙 {hud.allies}/{hud.allyCap}
           </span>
@@ -610,6 +649,69 @@ export default function GamePage() {
           </div>
         )}
 
+        {/* 🏪 상점 — 3단계마다 열린다 */}
+        {hud.phase === "shop" && (
+          <div className="absolute inset-0 flex flex-col overflow-y-auto bg-slate-900/95 px-3 py-2 text-left">
+            <div className="mb-1 flex shrink-0 items-center justify-between gap-2">
+              <p className="text-sm font-bold text-yellow-300 sm:text-xl">
+                🏪 상점
+              </p>
+              <p className="text-sm font-bold text-yellow-200 sm:text-lg">
+                ⭐ {hud.stars}
+              </p>
+            </div>
+
+            <div className="flex-1 space-y-1.5">
+              {SHOP_SECTIONS.map((sec) => (
+                <div key={sec.kind}>
+                  <p className="text-[11px] font-bold text-slate-300 sm:text-sm">
+                    {sec.title}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap gap-1.5">
+                    {SHOP_GOODS.filter((g) => g.kind === sec.kind).map((g) => {
+                      const tooPoor = hud.stars < g.price;
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => buy(g.id)}
+                          disabled={tooPoor}
+                          className={`flex-1 rounded-xl border-2 px-2 py-1 text-left transition ${
+                            tooPoor
+                              ? "border-slate-700 bg-slate-800/60 text-slate-500"
+                              : "border-yellow-400/70 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                          }`}
+                        >
+                          <span className="block text-[11px] font-bold sm:text-sm">
+                            {g.icon} {g.name}{" "}
+                            <span className="text-yellow-300">⭐{g.price}</span>
+                          </span>
+                          <span className="block text-[9px] font-normal opacity-75 sm:text-[11px]">
+                            {g.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2">
+              <p className="text-[10px] text-slate-400 sm:text-xs">
+                가진 것: 🛡️ 방어막 {hud.shieldOwned}개
+              </p>
+              <button
+                type="button"
+                onClick={leaveShop}
+                className="rounded-xl bg-orange-500 px-5 py-2 text-sm font-bold text-white shadow hover:bg-orange-600"
+              >
+                다음 단계로 →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 단계 클리어 / 게임 오버 */}
         {hud.phase !== "playing" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/60 text-center">
@@ -675,6 +777,14 @@ export default function GamePage() {
             />
           </div>
           <div className="pointer-events-auto absolute bottom-3 right-3 flex items-end gap-3">
+            {hud.shieldOwned > 0 && (
+              <PadButton
+                label="🎒"
+                onDown={useItem}
+                onUp={() => {}}
+                className={`${PAD} border-yellow-200/80 bg-yellow-500/40`}
+              />
+            )}
             <PadButton
               label="🛡️"
               onDown={() => set("guard", true)}
@@ -727,6 +837,15 @@ export default function GamePage() {
               hud.form === "sword" ? "" : "opacity-40"
             }`}
           />
+          {hud.shieldOwned > 0 && (
+            <PadButton
+              label="🎒"
+              sub={`M · ${hud.shieldOwned}개`}
+              onDown={useItem}
+              onUp={() => {}}
+              className="h-14 w-16 border-yellow-400 bg-yellow-100 text-lg text-yellow-900 sm:h-16 sm:w-20"
+            />
+          )}
           <PadButton
             label="점프"
             sub="Space"
@@ -749,7 +868,12 @@ export default function GamePage() {
           게임 방법
         </summary>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>시작 화면에서 <b>1~10단계</b> 중 원하는 단계를 골라 시작할 수 있어요.</li>
+          <li>
+            🏪 <b>3단계마다 상점</b>이 열려요. 모은 ⭐로 아이템·전리품·회복음식을
+            살 수 있어요. 산 <b>방어막</b>은 <b>M 키</b>나 🎒 버튼으로 쓰면 공격을
+            2번 막아줘요.
+          </li>
+          <li>시작 화면에서 고른 단계부터 시작할 수 있어요.</li>
           <li>
             😈 <b>고수 모드</b>: 탱크 없이 <b>바로 전사로</b> 시작하고,
             <b> 한 대만 맞아도 게임 오버</b>예요. <b>필살기도 없어요.</b> 적은

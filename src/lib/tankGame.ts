@@ -81,6 +81,66 @@ const NO_INPUT: GameInput = {
 
 export type PlayerForm = "tank" | "sword";
 
+// 🏪 상점 — 3단계마다 열린다. 모은 ⭐가 돈이다.
+export const SHOP_EVERY = 3;
+
+export type ShopKind = "item" | "loot" | "food";
+export type ShopGood = {
+  id: string;
+  kind: ShopKind;
+  icon: string;
+  name: string;
+  price: number; // 별 개수
+  desc: string;
+  once?: boolean; // 한 판에 한 번만 살 수 있는 것
+};
+
+export const SHOP_GOODS: ShopGood[] = [
+  // [아이템] 사두었다가 M 키 또는 아이템 버튼으로 꺼내 쓴다
+  {
+    id: "shield",
+    kind: "item",
+    icon: "🛡️",
+    name: "방어막",
+    price: 15,
+    desc: "쓰면 공격을 2번 막아줘요 (M 키 또는 아이템 버튼)",
+  },
+  // [전리품] 사는 순간부터 판이 끝날 때까지 계속 효과
+  {
+    id: "ally",
+    kind: "loot",
+    icon: "🚙",
+    name: "아군 호출기",
+    price: 20,
+    desc: "아군 탱크 1대가 바로 합류해요",
+  },
+  {
+    id: "armor",
+    kind: "loot",
+    icon: "💗",
+    name: "튼튼한 장갑",
+    price: 30,
+    desc: "하트 최대치가 1 늘고 바로 1 회복해요",
+  },
+  // [회복음식] 사면 그 자리에서 바로 회복
+  {
+    id: "bread",
+    kind: "food",
+    icon: "🍞",
+    name: "빵",
+    price: 8,
+    desc: "하트를 1 회복해요",
+  },
+  {
+    id: "chicken",
+    kind: "food",
+    icon: "🍗",
+    name: "치킨",
+    price: 18,
+    desc: "하트를 3 회복해요",
+  },
+];
+
 export type Hud = {
   stage: number;
   form: PlayerForm;
@@ -90,13 +150,16 @@ export type Hud = {
   hard: boolean; // 고수 모드
   tutorial: boolean; // 튜토리얼 모드
   tutorialText: string; // 지금 알려줄 내용
+  shieldOwned: number; // 가지고 있는 방어막 개수
+  shieldCharges: number; // 지금 켜져 있는 방어막이 막아줄 횟수
+  bought: string[]; // 이번 판에 산 것(한 번만 살 수 있는 품목 표시용)
   charge: number; // 0~1
   enemies: number;
   stars: number;
   bossActive: boolean;
   bossHp: number;
   bossMaxHp: number;
-  phase: "playing" | "clear" | "gameover";
+  phase: "playing" | "clear" | "gameover" | "shop";
   toast: string;
 };
 
@@ -491,6 +554,11 @@ export class TankGame {
   private paused = false;
   private starPickups: StarPickup[] = [];
   private starCount = 0;
+  // 🏪 상점 소지품
+  private shieldOwned = 0; // 가지고 있는 방어막
+  private shieldCharges = 0; // 켜져 있는 방어막이 막아줄 횟수
+  private bonusLives = 0; // 전리품으로 늘린 하트 최대치
+  private bought: string[] = []; // 이번 판에 산 품목
 
   private enemies: Enemy[] = [];
   private allies: Ally[] = [];
@@ -572,6 +640,61 @@ export class TankGame {
     if (on) this.tutorial = false; // 둘은 같이 켤 수 없다
   }
 
+  // 🏪 상점에서 사기. 별이 모자라거나 이미 산 것이면 false.
+  buy(id: string): boolean {
+    const good = SHOP_GOODS.find((g) => g.id === id);
+    if (!good) return false;
+    if (good.once && this.bought.includes(id)) return false;
+    if (this.starCount < good.price) return false;
+
+    this.starCount -= good.price;
+    this.bought.push(id);
+
+    switch (id) {
+      case "shield":
+        this.shieldOwned += 1;
+        break;
+      case "ally":
+        this.addAlly();
+        break;
+      case "armor":
+        this.bonusLives += 1;
+        this.lives += 1;
+        break;
+      case "bread":
+        this.lives = Math.min(this.maxLives(), this.lives + 1);
+        break;
+      case "chicken":
+        this.lives = Math.min(this.maxLives(), this.lives + 3);
+        break;
+    }
+    this.sfx.star();
+    this.setToast(`${good.icon} ${good.name} 구입!`, 1.6);
+    return true;
+  }
+
+  // 아이템 쓰기 (M 키 또는 아이템 버튼) — 지금은 방어막 하나뿐
+  useItem(): boolean {
+    if (this.shieldOwned <= 0 || this.shieldCharges > 0) return false;
+    this.shieldOwned -= 1;
+    this.shieldCharges = 2; // 공격을 2번 막아준다
+    this.sfx.guard();
+    this.setToast("🛡️ 방어막! 공격 2번 막아줘요", 2);
+    for (let i = 0; i < 16; i++)
+      this.spark(
+        this.player.x + this.player.w / 2,
+        this.player.y + this.player.h / 2,
+        i % 2 ? "#7dd3fc" : "#fde047",
+      );
+    return true;
+  }
+
+  // 상점에서 나가면 다음 단계로
+  leaveShop() {
+    if (this.phase !== "shop") return;
+    this.loadStage(this.stage + 1, true);
+  }
+
   setTutorial(on: boolean) {
     this.tutorial = on;
     if (on) this.hard = false;
@@ -601,7 +724,7 @@ export class TankGame {
         : this.form === "sword"
           ? SWORD_LIVES
           : START_LIVES;
-    return this.cheat ? base * 2 : base;
+    return (this.cheat ? base * 2 : base) + this.bonusLives;
   }
 
   // 🥚 이스터에그 치트키 — 하트 상한을 2배로 (탱크 5→10, 검사 3→6)
@@ -625,6 +748,10 @@ export class TankGame {
     // 고수 모드는 탱크 없이 바로 전사로 시작한다
     this.form = this.hard ? "sword" : "tank";
     this.cheat = false; // 치트키는 한 판에 한 번 — 새 판이면 초기화
+    this.shieldOwned = 0;
+    this.shieldCharges = 0;
+    this.bonusLives = 0;
+    this.bought = [];
     this.allies = [];
     this.loadStage(Math.max(1, Math.round(stage)));
   }
@@ -811,7 +938,16 @@ export class TankGame {
     if (this.phase === "clear") {
       this.phaseTimer -= dt;
       this.updateParticles(dt);
-      if (this.phaseTimer <= 0) this.loadStage(this.stage + 1, true);
+      if (this.phaseTimer <= 0) {
+        // 3단계마다 상점이 열린다
+        if (this.stage % SHOP_EVERY === 0) this.phase = "shop";
+        else this.loadStage(this.stage + 1, true);
+      }
+      this.pushHud();
+      return;
+    }
+    if (this.phase === "shop") {
+      this.updateParticles(dt);
       this.pushHud();
       return;
     }
@@ -1236,8 +1372,13 @@ export class TankGame {
   }
 
   private maybeAlly() {
-    if (this.allies.length >= this.allyCapacity()) return;
     if (Math.random() >= ALLY_CHANCE) return; // 6. 10% 확률
+    this.addAlly();
+  }
+
+  // 확률 없이 아군 1대를 바로 합류시킨다 (상점 '아군 호출기')
+  private addAlly() {
+    if (this.allies.length >= this.allyCapacity()) return;
     const p = this.player;
     this.allies.push({
       x: p.x - 60,
@@ -1479,6 +1620,20 @@ export class TankGame {
     const p = this.player;
     if (p.invuln > 0 && !fatal) return;
 
+    // 상점에서 산 방어막이 켜져 있으면 대신 막아준다
+    if (this.shieldCharges > 0 && !fatal) {
+      this.shieldCharges -= 1;
+      this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
+      p.invuln = INVULN;
+      this.setToast(
+        this.shieldCharges > 0
+          ? `🛡️ 막았다! ${this.shieldCharges}번 더 막아줘요`
+          : "🛡️ 방어막이 다 됐어요",
+        1.4,
+      );
+      return;
+    }
+
     // 검사가 막고 있으면 일반 피해는 통하지 않는다
     if (this.guarding && !fatal) {
       this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
@@ -1639,6 +1794,9 @@ export class TankGame {
       hard: this.hard,
       tutorial: this.tutorial,
       tutorialText: this.tutorialMessage(),
+      shieldOwned: this.shieldOwned,
+      shieldCharges: this.shieldCharges,
+      bought: this.bought,
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
@@ -1650,7 +1808,7 @@ export class TankGame {
     };
     const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
-    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}`;
+    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.shieldOwned}|${hud.shieldCharges}|${hud.bought.length}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);
