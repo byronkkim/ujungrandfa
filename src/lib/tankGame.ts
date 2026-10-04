@@ -206,6 +206,16 @@ export const SHOP_REROLL_PRICE = 3;
 
 // 🔨 대장간 — 검사만 들어갈 수 있다. 낡은 검을 고치면 능력이 붙는다.
 export const FORGE_REPAIR_PRICE = 50;
+
+// 🛸 하늘을 나는 적 — 위아래로 움직이며 1초마다 미사일을 쏜다
+const FLYER_HP = 1;
+const FLYER_STARS = 2; // 물리치면 주는 별
+const FLYER_SHOOT_EVERY = 1; // 몇 초마다 쏘는지
+const FLYER_ALLY_CHANCE = 0.6; // 물리쳤을 때 아군이 될 확률
+const FLYER_ALLY_CHANCE_DROP = 0.04; // 한 바퀴 돌 때마다 낮아지는 양
+const FLY_ALLY_HP = 16;
+const FLY_ALLY_HEAL = 5; // 단계가 끝날 때마다 회복
+const LOOP_STAGE = 12; // 여기까지 깨면 처음부터 다시 시작한다
 const FORGE_SHIELD_EVERY = 10; // 몇 초마다 방어막이 1 생기는지
 const FORGE_SHIELD_MAX = 3; // 방어막은 이만큼까지만 쌓인다
 const FORGE_BLADE_SCALE = 1.6; // 고친 검의 필살기(거대 칼날)가 커지는 배율
@@ -328,6 +338,31 @@ type Boss = Body & {
   hurt: number;
   lastKind: "normal" | "special" | null;
   hitSalvos: Set<number>;
+};
+
+// 하늘을 나는 적 / 그 적이 아군이 된 것
+type Flyer = {
+  x: number;
+  y: number;
+  baseY: number;
+  bob: number;
+  hp: number;
+  shootCd: number;
+  w: number;
+  h: number;
+};
+
+type FlyAlly = {
+  x: number;
+  y: number;
+  bob: number;
+  hp: number;
+  maxHp: number;
+  shootCd: number;
+  hurtCd: number;
+  offset: number;
+  w: number;
+  h: number;
 };
 
 type Particle = {
@@ -664,6 +699,9 @@ export class TankGame {
   private starBonus = false; // 전리품: 별주머니
 
   private enemies: Enemy[] = [];
+  private flyers: Flyer[] = []; // 하늘을 나는 적
+  private flyAllies: FlyAlly[] = []; // 아군이 된 비행체
+  private flyerAllyChance = FLYER_ALLY_CHANCE; // 한 바퀴 돌 때마다 낮아진다
   private allies: Ally[] = [];
   private missiles: Missile[] = [];
   private swings: Swing[] = [];
@@ -860,6 +898,13 @@ export class TankGame {
           hit += 1;
           this.maybeAlly();
         }
+        for (let j = this.flyers.length - 1; j >= 0; j--) {
+          const fl = this.flyers[j];
+          const sx = fl.x - this.camX;
+          if (sx < -40 || sx > VIEW_W + 40) continue;
+          this.hitFlyer(j);
+          hit += 1;
+        }
         this.shake = 18;
         this.sfx.boom();
         this.setToast(`⚡ 번개! 적 ${hit}마리 물리침`, 1.8);
@@ -927,7 +972,7 @@ export class TankGame {
   // 상점에서 나가면 다음 단계로
   leaveShop() {
     if (this.phase !== "shop") return;
-    this.loadStage(this.stage + 1, true);
+    this.loadStage(this.nextStage(), true);
   }
 
   setTutorial(on: boolean) {
@@ -990,6 +1035,8 @@ export class TankGame {
     this.shopOffer = [];
     this.inForge = false;
     this.swordFixed = false;
+    this.flyAllies = [];
+    this.flyerAllyChance = FLYER_ALLY_CHANCE;
     this.forgeShieldCd = 0;
     this.magnetTimer = 0;
     this.fastReload = false;
@@ -1001,6 +1048,22 @@ export class TankGame {
   /* ---------------- 스테이지 ---------------- */
 
   // keepAllies: 다음 단계로 넘어갈 때는 모아둔 아군 탱크를 데리고 간다
+  // 다음 단계 번호 (12단계를 깨면 1단계로 돌아가고 더 어려워진다)
+  private nextStage(): number {
+    if (this.stage >= LOOP_STAGE) {
+      this.flyerAllyChance = Math.max(
+        0,
+        this.flyerAllyChance - FLYER_ALLY_CHANCE_DROP,
+      );
+      this.setToast(
+        `🎉 ${LOOP_STAGE}단계 클리어! 처음부터 다시 — 더 어려워진다`,
+        3,
+      );
+      return 1;
+    }
+    return this.stage + 1;
+  }
+
   private loadStage(stage: number, keepAllies = false) {
     this.stage = stage;
     this.level = generateLevel(stage);
@@ -1029,6 +1092,22 @@ export class TankGame {
     this.safe = { x: 80, y: 300 };
 
     this.starPickups = this.level.stars.map((s) => ({ ...s, taken: false }));
+
+    // 🛸 하늘을 나는 적 1마리. 홀수 단계는 길 가운데, 짝수 단계는 보스와 함께.
+    const flyX =
+      stage % 2 === 1 ? this.level.length * 0.45 : this.level.bossX - 160;
+    this.flyers = [
+      {
+        x: flyX,
+        y: 180,
+        baseY: 180,
+        bob: Math.random() * Math.PI * 2,
+        hp: FLYER_HP,
+        shootCd: FLYER_SHOOT_EVERY,
+        w: 46,
+        h: 34,
+      },
+    ];
     // 튜토리얼 진행 상황 초기화
     this.tutStartX = this.player.x;
     this.tut = {
@@ -1096,8 +1175,16 @@ export class TankGame {
         a.hp = Math.min(a.maxHp, a.hp + ALLY_HEAL);
         a.hurtCd = 0;
       });
+      // 비행 아군도 단계가 끝날 때마다 5 회복
+      this.flyAllies.forEach((a, i) => {
+        a.x = this.player.x - 40 - i * 18;
+        a.y = 150;
+        a.hp = Math.min(a.maxHp, a.hp + FLY_ALLY_HEAL);
+        a.hurtCd = 0;
+      });
     } else {
       this.allies = [];
+      this.flyAllies = [];
     }
     this.missiles = [];
     this.swings = [];
@@ -1188,7 +1275,7 @@ export class TankGame {
           this.rollShop();
           this.shopFirePrev = true; // 손을 뗐다가 다시 눌러야 문이 열린다
         }
-        else this.loadStage(this.stage + 1, true);
+        else this.loadStage(this.nextStage(), true);
       }
       this.pushHud();
       return;
@@ -1239,6 +1326,8 @@ export class TankGame {
     this.updateBlades(dt);
     this.updateMissiles(dt);
     this.updateEnemies(dt);
+    this.updateFlyers(dt);
+    this.updateFlyAllies(dt);
     this.updateAllies(dt);
     this.updateBoss(dt);
     this.updateBullets(dt);
@@ -1474,6 +1563,12 @@ export class TankGame {
         h: 52,
       };
 
+      for (let j = this.flyers.length - 1; j >= 0; j--) {
+        const fl = this.flyers[j];
+        if (!overlap(box, { x: fl.x, y: fl.y, w: fl.w, h: fl.h })) continue;
+        this.hitFlyer(j);
+        break;
+      }
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const e = this.enemies[j];
         if (s.hits.has(e) || !overlap(box, e)) continue;
@@ -1520,6 +1615,11 @@ export class TankGame {
         h: 92 * k,
       };
 
+      for (let j = this.flyers.length - 1; j >= 0; j--) {
+        const fl = this.flyers[j];
+        if (!overlap(box, { x: fl.x, y: fl.y, w: fl.w, h: fl.h })) continue;
+        this.hitFlyer(j);
+      }
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const e = this.enemies[j];
         if (!overlap(box, e)) continue;
@@ -1562,6 +1662,18 @@ export class TankGame {
       }
 
       let used = false;
+      // 🛸 하늘 적 (체력 1이라 한 방)
+      for (let j = this.flyers.length - 1; j >= 0; j--) {
+        const fl = this.flyers[j];
+        if (!overlap(box, { x: fl.x, y: fl.y, w: fl.w, h: fl.h })) continue;
+        this.hitFlyer(j);
+        used = true;
+        break;
+      }
+      if (used) {
+        this.missiles.splice(i, 1);
+        continue;
+      }
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const e = this.enemies[j];
         if (!overlap(box, e)) continue;
@@ -1825,6 +1937,116 @@ export class TankGame {
       }
       const boss = this.boss;
       if (boss && overlap(boss, a)) this.hurtAlly(a, ALLY_DMG_BULLET);
+    }
+  }
+
+  // 🛸 하늘을 나는 적 — 위아래로 움직이고 1초마다 미사일을 쏜다
+  private updateFlyers(dt: number) {
+    const p = this.player;
+    for (let i = this.flyers.length - 1; i >= 0; i--) {
+      const fl = this.flyers[i];
+      fl.bob += dt * 1.6;
+      fl.y = fl.baseY + Math.sin(fl.bob) * 70; // 위아래로 크게 움직인다
+      // 화면 안에 들어오면 천천히 따라온다
+      const near = Math.abs(fl.x - (p.x + p.w / 2)) < VIEW_W;
+      if (near) {
+        const dir = Math.sign(p.x + p.w / 2 - (fl.x + fl.w / 2));
+        fl.x += dir * 45 * dt;
+        fl.shootCd -= dt;
+        if (fl.shootCd <= 0) {
+          fl.shootCd = FLYER_SHOOT_EVERY;
+          // 플레이어 쪽으로 미사일
+          const sx = fl.x + fl.w / 2;
+          const sy = fl.y + fl.h / 2;
+          const dx = p.x + p.w / 2 - sx;
+          const dy = p.y + p.h / 2 - sy;
+          const len = Math.hypot(dx, dy) || 1;
+          this.bullets.push({
+            x: sx,
+            y: sy,
+            vx: (dx / len) * 300,
+            vy: (dy / len) * 300,
+            life: 4,
+          });
+          this.sfx.shoot();
+        }
+      }
+    }
+  }
+
+  // 하늘 적이 맞았을 때 (체력 1이라 한 방)
+  private hitFlyer(index: number) {
+    const fl = this.flyers[index];
+    if (!fl) return;
+    this.flyers.splice(index, 1);
+    const cx = fl.x + fl.w / 2;
+    const cy = fl.y + fl.h / 2;
+    this.boom(cx, cy, "#38bdf8", 16);
+    this.sfx.boom();
+    // 별 2개를 떨군다
+    for (let k = 0; k < FLYER_STARS; k++) this.dropStar(cx + (k ? 26 : -26), cy);
+
+    // 확률에 따라 아군이 된다
+    if (Math.random() < this.flyerAllyChance) {
+      this.flyAllies.push({
+        x: cx,
+        y: cy,
+        bob: Math.random() * Math.PI * 2,
+        hp: FLY_ALLY_HP,
+        maxHp: FLY_ALLY_HP,
+        shootCd: 0.6,
+        hurtCd: 0,
+        offset: 70 + this.flyAllies.length * 24,
+        w: 46,
+        h: 34,
+      });
+      this.sfx.transform();
+      this.setToast(`🛸 하늘 아군 합류! (${this.flyAllies.length}대)`, 2);
+    }
+  }
+
+  // 🛸 아군이 된 비행체 — 따라다니며 앞쪽으로 쏜다
+  private updateFlyAllies(dt: number) {
+    const p = this.player;
+    for (let i = this.flyAllies.length - 1; i >= 0; i--) {
+      const a = this.flyAllies[i];
+      if (a.hurtCd > 0) a.hurtCd -= dt;
+      a.bob += dt * 2;
+      const targetX = p.x - p.dir * a.offset;
+      a.x += (targetX - a.x) * Math.min(1, dt * 3);
+      a.y += (p.y - 110 + Math.sin(a.bob) * 14 - a.y) * Math.min(1, dt * 3);
+
+      a.shootCd -= dt;
+      if (a.shootCd <= 0) {
+        a.shootCd = 1.1;
+        this.missiles.push({
+          x: a.x + a.w / 2 + p.dir * 24,
+          y: a.y + a.h / 2,
+          vx: p.dir * 640,
+          kind: "normal",
+          from: "ally",
+          salvo: this.salvoSeq++,
+          life: 2.4,
+        });
+        this.spark(a.x + a.w / 2, a.y + a.h / 2, "#7dd3fc");
+      }
+
+      // 적·보스와 부딪히면 아프다
+      const box: Rect = { x: a.x, y: a.y, w: a.w, h: a.h };
+      const touched =
+        this.enemies.some((e) => overlap(e, box)) ||
+        (this.boss ? overlap(this.boss, box) : false);
+      if (touched && a.hurtCd <= 0) {
+        a.hurtCd = ALLY_HIT_CD;
+        a.hp -= ALLY_DMG_TOUCH;
+        this.boom(a.x + a.w / 2, a.y + a.h / 2, "#38bdf8", 6);
+      }
+      if (a.hp <= 0) {
+        this.flyAllies.splice(i, 1);
+        this.boom(a.x + a.w / 2, a.y + a.h / 2, "#0ea5e9", 18);
+        this.sfx.boom();
+        this.setToast(`🛸 하늘 아군 격추! (남은 ${this.flyAllies.length}대)`, 1.6);
+      }
     }
   }
 
@@ -2123,6 +2345,8 @@ export class TankGame {
     this.drawPlatforms();
     this.drawStars();
     this.drawEnemies();
+    this.drawFlyers();
+    this.drawFlyAllies();
     this.drawBoss();
     this.drawAllies();
     this.drawPlayer();
@@ -2594,6 +2818,70 @@ export class TankGame {
           ctx.fillRect(x + 4 + i * 9, e.y - 12, 6, 4);
         }
       }
+    }
+  }
+
+  // 🛸 하늘을 나는 적 / 하늘 아군 (같은 모양, 색만 다르다)
+  private saucer(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    body: string,
+    dome: string,
+    glow: string,
+  ) {
+    const ctx = this.ctx;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    // 아래 불빛
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy + 6);
+    ctx.lineTo(cx + 10, cy + 6);
+    ctx.lineTo(cx + 20, cy + 26);
+    ctx.lineTo(cx - 20, cy + 26);
+    ctx.closePath();
+    ctx.fill();
+    // 몸통(접시)
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 4, w / 2, h / 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 유리 돔
+    ctx.fillStyle = dome;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 4, w / 4, h / 3, 0, Math.PI, 0);
+    ctx.fill();
+    // 불빛 점
+    ctx.fillStyle = "#fde047";
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.arc(cx + i * 13, cy + 5, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  private drawFlyers() {
+    for (const fl of this.flyers) {
+      const x = fl.x - this.camX;
+      if (x < -60 || x > VIEW_W + 60) continue;
+      this.saucer(x, fl.y, fl.w, fl.h, "#7c3aed", "#c4b5fd", "rgba(168,85,247,0.3)");
+    }
+  }
+
+  private drawFlyAllies() {
+    const ctx = this.ctx;
+    for (const a of this.flyAllies) {
+      const x = a.x - this.camX;
+      if (x < -60 || x > VIEW_W + 60) continue;
+      // 체력 막대
+      const ratio = Math.max(0, a.hp / a.maxHp);
+      ctx.fillStyle = "rgba(15,23,42,0.6)";
+      ctx.fillRect(x + 4, a.y - 10, a.w - 8, 5);
+      ctx.fillStyle = ratio > 0.5 ? "#38bdf8" : ratio > 0.25 ? "#fbbf24" : "#ef4444";
+      ctx.fillRect(x + 4, a.y - 10, Math.max(2, (a.w - 8) * ratio), 5);
+      this.saucer(x, a.y, a.w, a.h, "#0284c7", "#bae6fd", "rgba(56,189,248,0.35)");
     }
   }
 
