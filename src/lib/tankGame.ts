@@ -647,6 +647,7 @@ export class TankGame {
   private bonusLives = 0; // 전리품으로 늘린 하트 최대치
   private bought: string[] = []; // 이번 판에 산 품목
   private shopOffer: string[] = []; // 지금 상점에 걸린 품목(분류당 1개)
+  private shopFirePrev = true; // 상점 문: 발사 버튼을 "새로" 눌렀는지 보려고
   private magnetTimer = 0; // 자석 남은 시간
   private fastReload = false; // 전리품: 빠른 장전
   private starBonus = false; // 전리품: 별주머니
@@ -865,6 +866,15 @@ export class TankGame {
     if (good.id !== "bolt")
       this.setToast(`${good.icon} ${good.name} 사용!`, 1.8);
     return true;
+  }
+
+  // 🚪 상점 문 — 공격하면 열린다
+  openShopDoor() {
+    if (this.phase !== "shop") return;
+    this.sfx.boom();
+    this.shake = 14;
+    this.setToast("🚪 문이 열렸다!", 1.6);
+    this.leaveShop();
   }
 
   // 상점에서 나가면 다음 단계로
@@ -1125,6 +1135,7 @@ export class TankGame {
         if (this.stage % SHOP_EVERY === 0) {
           this.phase = "shop";
           this.rollShop();
+          this.shopFirePrev = true; // 손을 뗐다가 다시 눌러야 문이 열린다
         }
         else this.loadStage(this.stage + 1, true);
       }
@@ -1132,6 +1143,13 @@ export class TankGame {
       return;
     }
     if (this.phase === "shop") {
+      // 🚪 문을 한 번 공격하면 다음 단계로 간다
+      const firePressed = this.input.fire && !this.shopFirePrev;
+      this.shopFirePrev = this.input.fire;
+      if (firePressed) {
+        this.openShopDoor();
+        return;
+      }
       this.updateParticles(dt);
       this.pushHud();
       return;

@@ -329,8 +329,9 @@ export default function GamePage() {
   const reroll = useCallback(() => {
     gameRef.current?.rerollShop();
   }, []);
-  const leaveShop = useCallback(() => {
-    gameRef.current?.leaveShop();
+  const openDoor = useCallback(() => {
+    gameRef.current?.enableAudio();
+    gameRef.current?.openShopDoor();
   }, []);
   const useItem = useCallback(() => {
     gameRef.current?.enableAudio();
@@ -731,10 +732,16 @@ export default function GamePage() {
               </button>
               <button
                 type="button"
-                onClick={leaveShop}
-                className="rounded-xl bg-orange-500 px-5 py-2 text-sm font-bold text-white shadow hover:bg-orange-600"
+                onClick={openDoor}
+                className="flex items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-700/60 px-4 py-2 text-sm font-bold text-amber-50 shadow transition hover:bg-amber-600/70"
               >
-                다음 단계로 →
+                <span className="text-2xl leading-none">🚪</span>
+                <span className="text-left leading-tight">
+                  문
+                  <span className="block text-[10px] font-normal opacity-90">
+                    공격하면 열려요! (● / X)
+                  </span>
+                </span>
               </button>
             </div>
           </div>
@@ -790,7 +797,9 @@ export default function GamePage() {
       {started && (
         <div
           className={`pointer-events-none fixed inset-0 z-30 select-none transition-opacity lg:hidden ${
-            hud.phase === "playing" && !paused ? "" : "opacity-30"
+            (hud.phase === "playing" || hud.phase === "shop") && !paused
+              ? ""
+              : "opacity-30"
           }`}
         >
           <div className="pointer-events-auto absolute bottom-3 left-3 flex items-end gap-3">
