@@ -855,6 +855,7 @@ export class TankGame {
           const sx = e.x - this.camX;
           if (sx < -40 || sx > VIEW_W + 40) continue;
           this.enemies.splice(i, 1);
+          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#fde047", 14);
           hit += 1;
           this.maybeAlly();
@@ -1303,6 +1304,11 @@ export class TankGame {
     );
   }
 
+  // 적을 물리친 자리에 별 1개를 떨군다
+  private dropStar(x: number, y: number) {
+    this.starPickups.push({ x, y: y - 10, taken: false });
+  }
+
   // 별 줍기 (별 모으기 앱이니까 게임에서도 별을 모은다)
   private updateStars() {
     const p = this.player;
@@ -1475,6 +1481,7 @@ export class TankGame {
         e.hp -= 1;
         if (e.hp <= 0) {
           this.enemies.splice(j, 1);
+          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#a855f7", 14);
           this.sfx.boom();
           this.maybeAlly();
@@ -1517,6 +1524,7 @@ export class TankGame {
         const e = this.enemies[j];
         if (!overlap(box, e)) continue;
         this.enemies.splice(j, 1); // 체력 무시하고 즉사
+        this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
         this.boom(e.x + e.w / 2, e.y + e.h / 2, "#e2e8f0", 16);
         this.boom(e.x + e.w / 2, e.y + e.h / 2, "#a855f7", 10);
         this.sfx.boom();
@@ -1560,6 +1568,7 @@ export class TankGame {
         e.hp -= ehpDmg(m);
         if (e.hp <= 0) {
           this.enemies.splice(j, 1);
+          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#a855f7", 14);
           this.sfx.boom();
           this.maybeAlly();
