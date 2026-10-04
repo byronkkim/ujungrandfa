@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   SHOP_GOODS,
+  SHOP_REROLL_PRICE,
   TankGame,
   VIEW_H,
   VIEW_W,
@@ -60,9 +61,12 @@ const INITIAL_HUD: Hud = {
   hard: false,
   tutorial: false,
   tutorialText: "",
-  shieldOwned: 0,
   shieldCharges: 0,
   bought: [],
+  shopOffer: [],
+  itemIcon: "",
+  itemCount: 0,
+  bestStage: 0,
   charge: 0,
   enemies: 0,
   stars: 0,
@@ -322,6 +326,9 @@ export default function GamePage() {
   const buy = useCallback((id: string) => {
     gameRef.current?.buy(id);
   }, []);
+  const reroll = useCallback(() => {
+    gameRef.current?.rerollShop();
+  }, []);
   const leaveShop = useCallback(() => {
     gameRef.current?.leaveShop();
   }, []);
@@ -401,12 +408,14 @@ export default function GamePage() {
           <span className="rounded-lg bg-yellow-100 px-2 py-1 text-yellow-800">
             ⭐ {hud.stars}
           </span>
-          {(hud.shieldOwned > 0 || hud.shieldCharges > 0) && (
+          {hud.itemCount > 0 && (
+            <span className="rounded-lg bg-yellow-100 px-2 py-1 text-yellow-900">
+              🎒 {hud.itemIcon} {hud.itemCount}
+            </span>
+          )}
+          {hud.shieldCharges > 0 && (
             <span className="rounded-lg bg-sky-100 px-2 py-1 text-sky-800">
-              🛡️{" "}
-              {hud.shieldCharges > 0
-                ? `켜짐 ${hud.shieldCharges}`
-                : hud.shieldOwned}
+              🛡️ {hud.shieldCharges}
             </span>
           )}
           <span className="rounded-lg bg-blue-100 px-2 py-1 text-blue-800">
@@ -557,6 +566,11 @@ export default function GamePage() {
             <p className="hidden text-xs text-slate-300 sm:block">
               별을 모으고, 오른쪽 끝의 보스를 물리쳐요
             </p>
+            {hud.bestStage > 0 && (
+              <p className="text-[11px] font-bold text-yellow-300 sm:text-sm">
+                🏅 지금까지 깬 단계: {hud.bestStage}단계
+              </p>
+            )}
 
             {/* 시작할 단계 고르기 */}
             <p className="text-[11px] font-bold text-slate-200 sm:text-xs">
@@ -668,7 +682,9 @@ export default function GamePage() {
                     {sec.title}
                   </p>
                   <div className="mt-0.5 flex flex-wrap gap-1.5">
-                    {SHOP_GOODS.filter((g) => g.kind === sec.kind).map((g) => {
+                    {SHOP_GOODS.filter(
+                      (g) => g.kind === sec.kind && hud.shopOffer.includes(g.id),
+                    ).map((g) => {
                       const tooPoor = hud.stars < g.price;
                       return (
                         <button
@@ -692,15 +708,27 @@ export default function GamePage() {
                         </button>
                       );
                     })}
+                    {!SHOP_GOODS.some(
+                      (g) => g.kind === sec.kind && hud.shopOffer.includes(g.id),
+                    ) && (
+                      <p className="px-1 text-[10px] text-slate-500 sm:text-xs">
+                        다 팔렸어요
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2">
-              <p className="text-[10px] text-slate-400 sm:text-xs">
-                가진 것: 🛡️ 방어막 {hud.shieldOwned}개
-              </p>
+              <button
+                type="button"
+                onClick={reroll}
+                disabled={hud.stars < SHOP_REROLL_PRICE}
+                className="rounded-xl border-2 border-yellow-400/70 px-3 py-2 text-[11px] font-bold text-yellow-200 transition hover:bg-slate-800 disabled:opacity-40 sm:text-sm"
+              >
+                🎲 다시 뽑기 ⭐{SHOP_REROLL_PRICE}
+              </button>
               <button
                 type="button"
                 onClick={leaveShop}
@@ -729,6 +757,9 @@ export default function GamePage() {
                 </p>
                 <p className="text-white">
                   {hud.stage}단계까지 · 별 {hud.stars}개
+                </p>
+                <p className="rounded-xl bg-yellow-500/20 px-4 py-2 text-base font-bold text-yellow-200">
+                  🏅 지금까지 깬 단계: {hud.bestStage}단계
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <button
@@ -777,9 +808,9 @@ export default function GamePage() {
             />
           </div>
           <div className="pointer-events-auto absolute bottom-3 right-3 flex items-end gap-3">
-            {hud.shieldOwned > 0 && (
+            {hud.itemCount > 0 && (
               <PadButton
-                label="🎒"
+                label={hud.itemIcon || "🎒"}
                 onDown={useItem}
                 onUp={() => {}}
                 className={`${PAD} border-yellow-200/80 bg-yellow-500/40`}
@@ -837,10 +868,10 @@ export default function GamePage() {
               hud.form === "sword" ? "" : "opacity-40"
             }`}
           />
-          {hud.shieldOwned > 0 && (
+          {hud.itemCount > 0 && (
             <PadButton
-              label="🎒"
-              sub={`M · ${hud.shieldOwned}개`}
+              label={hud.itemIcon || "🎒"}
+              sub={`M · ${hud.itemCount}개`}
               onDown={useItem}
               onUp={() => {}}
               className="h-14 w-16 border-yellow-400 bg-yellow-100 text-lg text-yellow-900 sm:h-16 sm:w-20"

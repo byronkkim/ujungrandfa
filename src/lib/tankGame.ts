@@ -96,16 +96,41 @@ export type ShopGood = {
 };
 
 export const SHOP_GOODS: ShopGood[] = [
-  // [아이템] 사두었다가 M 키 또는 아이템 버튼으로 꺼내 쓴다
+  // ───── [아이템] 사두었다가 M 키 또는 🎒 버튼으로 꺼내 쓴다 ─────
   {
     id: "shield",
     kind: "item",
     icon: "🛡️",
     name: "방어막",
     price: 15,
-    desc: "쓰면 공격을 2번 막아줘요 (M 키 또는 아이템 버튼)",
+    desc: "공격을 2번 막아줘요",
   },
-  // [전리품] 사는 순간부터 판이 끝날 때까지 계속 효과
+  {
+    id: "bolt",
+    kind: "item",
+    icon: "⚡",
+    name: "번개",
+    price: 20,
+    desc: "화면에 보이는 적을 몽땅 물리쳐요",
+  },
+  {
+    id: "potion",
+    kind: "item",
+    icon: "✨",
+    name: "무적약",
+    price: 18,
+    desc: "5초 동안 아무것도 안 아파요",
+  },
+  {
+    id: "magnet",
+    kind: "item",
+    icon: "🧲",
+    name: "자석",
+    price: 10,
+    desc: "10초 동안 둘레의 ⭐이 끌려와요",
+  },
+
+  // ───── [전리품] 사는 순간부터 판이 끝날 때까지 계속 효과 ─────
   {
     id: "ally",
     kind: "loot",
@@ -122,7 +147,26 @@ export const SHOP_GOODS: ShopGood[] = [
     price: 30,
     desc: "하트 최대치가 1 늘고 바로 1 회복해요",
   },
-  // [회복음식] 사면 그 자리에서 바로 회복
+  {
+    id: "reload",
+    kind: "loot",
+    icon: "🔥",
+    name: "빠른 장전",
+    price: 25,
+    desc: "미사일이 더 빨리 나가요 (세기는 그대로)",
+    once: true,
+  },
+  {
+    id: "pouch",
+    kind: "loot",
+    icon: "👜",
+    name: "별주머니",
+    price: 15,
+    desc: "⭐을 주우면 2개로 쳐줘요",
+    once: true,
+  },
+
+  // ───── [회복음식] 사면 그 자리에서 바로 회복 ─────
   {
     id: "bread",
     kind: "food",
@@ -132,6 +176,14 @@ export const SHOP_GOODS: ShopGood[] = [
     desc: "하트를 1 회복해요",
   },
   {
+    id: "milk",
+    kind: "food",
+    icon: "🥛",
+    name: "우유",
+    price: 12,
+    desc: "하트를 2 회복해요",
+  },
+  {
     id: "chicken",
     kind: "food",
     icon: "🍗",
@@ -139,7 +191,38 @@ export const SHOP_GOODS: ShopGood[] = [
     price: 18,
     desc: "하트를 3 회복해요",
   },
+  {
+    id: "cake",
+    kind: "food",
+    icon: "🍰",
+    name: "케이크",
+    price: 28,
+    desc: "하트를 가득 채워줘요",
+  },
 ];
+
+// 상점에서 한 번에 보여줄 품목 수(분류당 1개)와 다시 뽑는 값
+export const SHOP_REROLL_PRICE = 3;
+
+// 깬 단계 기록은 이 기기(브라우저)에만 저장한다
+const BEST_STAGE_KEY = "ujuTank.bestStage";
+
+function loadBestStage(): number {
+  try {
+    const v = Number(window.localStorage.getItem(BEST_STAGE_KEY));
+    return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  } catch {
+    return 0; // 저장을 못 쓰는 환경이면 그냥 0
+  }
+}
+
+function saveBestStage(stage: number) {
+  try {
+    window.localStorage.setItem(BEST_STAGE_KEY, String(stage));
+  } catch {
+    /* 저장 못 해도 게임은 계속된다 */
+  }
+}
 
 export type Hud = {
   stage: number;
@@ -150,9 +233,12 @@ export type Hud = {
   hard: boolean; // 고수 모드
   tutorial: boolean; // 튜토리얼 모드
   tutorialText: string; // 지금 알려줄 내용
-  shieldOwned: number; // 가지고 있는 방어막 개수
   shieldCharges: number; // 지금 켜져 있는 방어막이 막아줄 횟수
   bought: string[]; // 이번 판에 산 것(한 번만 살 수 있는 품목 표시용)
+  shopOffer: string[]; // 지금 상점에 걸린 품목 id (분류당 1개)
+  itemIcon: string; // 다음에 쓸 아이템 그림 (없으면 "")
+  itemCount: number; // 가방에 든 아이템 총 개수
+  bestStage: number; // 지금까지 깬 가장 높은 단계
   charge: number; // 0~1
   enemies: number;
   stars: number;
@@ -554,11 +640,16 @@ export class TankGame {
   private paused = false;
   private starPickups: StarPickup[] = [];
   private starCount = 0;
+  private bestStage = 0; // 지금까지 깬 가장 높은 단계(기기에 저장)
   // 🏪 상점 소지품
-  private shieldOwned = 0; // 가지고 있는 방어막
+  private items: Record<string, number> = {}; // 가지고 있는 아이템(종류별 개수)
   private shieldCharges = 0; // 켜져 있는 방어막이 막아줄 횟수
   private bonusLives = 0; // 전리품으로 늘린 하트 최대치
   private bought: string[] = []; // 이번 판에 산 품목
+  private shopOffer: string[] = []; // 지금 상점에 걸린 품목(분류당 1개)
+  private magnetTimer = 0; // 자석 남은 시간
+  private fastReload = false; // 전리품: 빠른 장전
+  private starBonus = false; // 전리품: 별주머니
 
   private enemies: Enemy[] = [];
   private allies: Ally[] = [];
@@ -591,6 +682,7 @@ export class TankGame {
     canvas.height = Math.round(VIEW_H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+    this.bestStage = loadBestStage();
     this.loadStage(1);
   }
 
@@ -641,6 +733,33 @@ export class TankGame {
   }
 
   // 🏪 상점에서 사기. 별이 모자라거나 이미 산 것이면 false.
+  // 상점 품목 뽑기 — 분류마다 한 가지씩만 걸린다
+  private rollShop() {
+    const kinds: ShopKind[] = ["item", "loot", "food"];
+    this.shopOffer = kinds
+      .map((kind) => {
+        const pool = SHOP_GOODS.filter(
+          (g) => g.kind === kind && !(g.once && this.bought.includes(g.id)),
+        );
+        if (pool.length === 0) return "";
+        return pool[Math.floor(Math.random() * pool.length)].id;
+      })
+      .filter((id) => id !== "");
+  }
+
+  // ⭐3을 내고 걸린 품목을 전부 다시 뽑는다
+  rerollShop(): boolean {
+    if (this.phase !== "shop" || this.starCount < SHOP_REROLL_PRICE) return false;
+    this.starCount -= SHOP_REROLL_PRICE;
+    const before = this.shopOffer.join(",");
+    this.rollShop();
+    // 똑같이 나오면 한 번 더 굴려준다
+    if (this.shopOffer.join(",") === before) this.rollShop();
+    this.sfx.star();
+    return true;
+  }
+
+  // 🏪 상점에서 사기. 별이 모자라거나 이미 산 것이면 false.
   buy(id: string): boolean {
     const good = SHOP_GOODS.find((g) => g.id === id);
     if (!good) return false;
@@ -650,42 +769,101 @@ export class TankGame {
     this.starCount -= good.price;
     this.bought.push(id);
 
-    switch (id) {
-      case "shield":
-        this.shieldOwned += 1;
-        break;
-      case "ally":
-        this.addAlly();
-        break;
-      case "armor":
-        this.bonusLives += 1;
-        this.lives += 1;
-        break;
-      case "bread":
-        this.lives = Math.min(this.maxLives(), this.lives + 1);
-        break;
-      case "chicken":
-        this.lives = Math.min(this.maxLives(), this.lives + 3);
-        break;
+    if (good.kind === "item") {
+      // 아이템은 가방에 넣어두었다가 꺼내 쓴다
+      this.items[id] = (this.items[id] ?? 0) + 1;
+    } else {
+      switch (id) {
+        case "ally":
+          this.addAlly();
+          break;
+        case "armor":
+          this.bonusLives += 1;
+          this.lives += 1;
+          break;
+        case "reload":
+          this.fastReload = true;
+          break;
+        case "pouch":
+          this.starBonus = true;
+          break;
+        case "bread":
+          this.lives = Math.min(this.maxLives(), this.lives + 1);
+          break;
+        case "milk":
+          this.lives = Math.min(this.maxLives(), this.lives + 2);
+          break;
+        case "chicken":
+          this.lives = Math.min(this.maxLives(), this.lives + 3);
+          break;
+        case "cake":
+          this.lives = this.maxLives();
+          break;
+      }
     }
+
+    // 산 품목은 자리에서 빠진다
+    this.shopOffer = this.shopOffer.filter((x) => x !== id);
     this.sfx.star();
     this.setToast(`${good.icon} ${good.name} 구입!`, 1.6);
     return true;
   }
 
-  // 아이템 쓰기 (M 키 또는 아이템 버튼) — 지금은 방어막 하나뿐
+  // 가방에서 다음에 쓸 아이템
+  private nextItem() {
+    return (
+      SHOP_GOODS.find(
+        (g) => g.kind === "item" && (this.items[g.id] ?? 0) > 0,
+      ) ?? null
+    );
+  }
+
+  // 아이템 쓰기 (M 키 또는 🎒 버튼)
   useItem(): boolean {
-    if (this.shieldOwned <= 0 || this.shieldCharges > 0) return false;
-    this.shieldOwned -= 1;
-    this.shieldCharges = 2; // 공격을 2번 막아준다
-    this.sfx.guard();
-    this.setToast("🛡️ 방어막! 공격 2번 막아줘요", 2);
+    const good = this.nextItem();
+    if (!good) return false;
+    this.items[good.id] -= 1;
+
+    const p = this.player;
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+
+    switch (good.id) {
+      case "shield":
+        this.shieldCharges = 2; // 공격을 2번 막아준다
+        this.sfx.guard();
+        break;
+      case "bolt": {
+        // 화면에 보이는 적을 몽땅 물리친다
+        let hit = 0;
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+          const e = this.enemies[i];
+          const sx = e.x - this.camX;
+          if (sx < -40 || sx > VIEW_W + 40) continue;
+          this.enemies.splice(i, 1);
+          this.boom(e.x + e.w / 2, e.y + e.h / 2, "#fde047", 14);
+          hit += 1;
+          this.maybeAlly();
+        }
+        this.shake = 18;
+        this.sfx.boom();
+        this.setToast(`⚡ 번개! 적 ${hit}마리 물리침`, 1.8);
+        break;
+      }
+      case "potion":
+        p.invuln = 5;
+        this.sfx.transform();
+        break;
+      case "magnet":
+        this.magnetTimer = 10;
+        this.sfx.star();
+        break;
+    }
+
     for (let i = 0; i < 16; i++)
-      this.spark(
-        this.player.x + this.player.w / 2,
-        this.player.y + this.player.h / 2,
-        i % 2 ? "#7dd3fc" : "#fde047",
-      );
+      this.spark(cx, cy, i % 2 ? "#7dd3fc" : "#fde047");
+    if (good.id !== "bolt")
+      this.setToast(`${good.icon} ${good.name} 사용!`, 1.8);
     return true;
   }
 
@@ -748,10 +926,14 @@ export class TankGame {
     // 고수 모드는 탱크 없이 바로 전사로 시작한다
     this.form = this.hard ? "sword" : "tank";
     this.cheat = false; // 치트키는 한 판에 한 번 — 새 판이면 초기화
-    this.shieldOwned = 0;
+    this.items = {};
     this.shieldCharges = 0;
     this.bonusLives = 0;
     this.bought = [];
+    this.shopOffer = [];
+    this.magnetTimer = 0;
+    this.fastReload = false;
+    this.starBonus = false;
     this.allies = [];
     this.loadStage(Math.max(1, Math.round(stage)));
   }
@@ -940,7 +1122,10 @@ export class TankGame {
       this.updateParticles(dt);
       if (this.phaseTimer <= 0) {
         // 3단계마다 상점이 열린다
-        if (this.stage % SHOP_EVERY === 0) this.phase = "shop";
+        if (this.stage % SHOP_EVERY === 0) {
+          this.phase = "shop";
+          this.rollShop();
+        }
         else this.loadStage(this.stage + 1, true);
       }
       this.pushHud();
@@ -964,6 +1149,7 @@ export class TankGame {
       return;
     }
 
+    if (this.magnetTimer > 0) this.magnetTimer -= dt;
     this.updatePlayer(dt);
     this.updateStars();
     this.updateWeapons(dt);
@@ -1039,12 +1225,13 @@ export class TankGame {
   // 별 줍기 (별 모으기 앱이니까 게임에서도 별을 모은다)
   private updateStars() {
     const p = this.player;
+    const reach = this.magnetTimer > 0 ? 170 : 40; // 🧲 자석이면 멀리서도 끌려온다
     for (const s of this.starPickups) {
       if (s.taken) continue;
-      if (Math.abs(s.x - (p.x + p.w / 2)) > 40) continue;
-      if (Math.abs(s.y - (p.y + p.h / 2)) > 40) continue;
+      if (Math.abs(s.x - (p.x + p.w / 2)) > reach) continue;
+      if (Math.abs(s.y - (p.y + p.h / 2)) > reach) continue;
       s.taken = true;
-      this.starCount += 1;
+      this.starCount += this.starBonus ? 2 : 1; // 👜 별주머니면 2개로
       this.tut.star = true;
       this.sfx.star();
       for (let i = 0; i < 10; i++) this.spark(s.x, s.y, "#fde047");
@@ -1093,7 +1280,7 @@ export class TankGame {
     if (this.input.fire && !this.guarding) {
       // 눌린 동안 0.3초마다 한 번 + 충전
       if (this.cool <= 0 && this.special.left === 0) {
-        this.cool = FIRE_COOLDOWN;
+        this.cool = this.fastReload ? FIRE_COOLDOWN * 0.6 : FIRE_COOLDOWN;
         this.tut.attacked = true; // 직접 눌러서 쏜 것만 "배웠다"로 친다
         this.attack("normal", p.dir, this.salvoSeq++);
       }
@@ -1345,6 +1532,11 @@ export class TankGame {
   private killBoss(b: Boss) {
     this.boss = null;
     this.tut.cleared = true;
+    // 깬 단계 기록 저장 (죽어도 남는다)
+    if (this.stage > this.bestStage) {
+      this.bestStage = this.stage;
+      saveBestStage(this.bestStage);
+    }
     // 누르고 있던 입력을 여기서 끊는다. 안 그러면 클리어 화면을 지나 다음 단계에서
     // 계속 자동으로 공격이 나간다.
     this.input = { ...NO_INPUT };
@@ -1794,9 +1986,12 @@ export class TankGame {
       hard: this.hard,
       tutorial: this.tutorial,
       tutorialText: this.tutorialMessage(),
-      shieldOwned: this.shieldOwned,
       shieldCharges: this.shieldCharges,
       bought: this.bought,
+      shopOffer: this.shopOffer,
+      itemIcon: this.nextItem()?.icon ?? "",
+      itemCount: Object.values(this.items).reduce((a, b) => a + b, 0),
+      bestStage: this.bestStage,
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
@@ -1808,7 +2003,7 @@ export class TankGame {
     };
     const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
-    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.shieldOwned}|${hud.shieldCharges}|${hud.bought.length}`;
+    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);
