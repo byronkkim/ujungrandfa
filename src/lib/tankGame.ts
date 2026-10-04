@@ -450,6 +450,8 @@ class Sfx {
   }
 
   shoot() { this.tone(760, 0.07, "square", 0.04, 240); }
+  // 적이 쏘는 소리 — 내 발사음과 헷갈리지 않게 낮고 작게
+  enemyShoot() { this.tone(170, 0.09, "sine", 0.018, 110); }
   special() { this.tone(300, 0.22, "sawtooth", 0.07, 900); }
   jump() { this.tone(340, 0.12, "sine", 0.05, 680); }
   boom() { this.noise(0.24, 0.16); }
@@ -1994,7 +1996,7 @@ export class TankGame {
             vy: (dy / len) * 300,
             life: 4,
           });
-          this.sfx.shoot();
+          this.sfx.enemyShoot();
         }
       }
     }
