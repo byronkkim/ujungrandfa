@@ -1377,6 +1377,16 @@ export class TankGame {
     return this.level.lavas.some((l) => overlap(b, l));
   }
 
+  // 그 x 자리의 땅 윗면 높이 (구멍이면 null)
+  private groundTopAt(x: number): number | null {
+    let top: number | null = null;
+    for (const p of this.level.platforms) {
+      if (x < p.x || x > p.x + p.w) continue;
+      if (top === null || p.y < top) top = p.y;
+    }
+    return top;
+  }
+
   // 발밑이 넉넉히 단단한지 (앞뒤 70px까지 땅이 있고, 용암 위가 아님)
   private standingSafely(b: Body) {
     const foot = b.y + b.h + 8;
@@ -1946,7 +1956,13 @@ export class TankGame {
     for (let i = this.flyers.length - 1; i >= 0; i--) {
       const fl = this.flyers[i];
       fl.bob += dt * 1.6;
-      fl.y = fl.baseY + Math.sin(fl.bob) * 70; // 위아래로 크게 움직인다
+      // 아래로 내려올 때는 평지에 닿고, 위로는 높이 올라간다
+      const ground = this.groundTopAt(fl.x + fl.w / 2) ?? 420;
+      const low = ground - fl.h; // 바닥에 닿는 높이
+      const high = low - 230; // 가장 높이 올라갔을 때
+      const mid = (low + high) / 2;
+      fl.y = mid + Math.sin(fl.bob) * ((low - high) / 2);
+      fl.baseY = mid;
       // 화면 안에 들어오면 천천히 따라온다
       const near = Math.abs(fl.x - (p.x + p.w / 2)) < VIEW_W;
       if (near) {
