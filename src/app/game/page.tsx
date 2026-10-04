@@ -46,6 +46,15 @@ const PAD =
 const PAD_BIG =
   "h-16 w-16 rounded-full border-2 text-2xl text-white shadow-lg backdrop-blur-sm";
 
+// 📖 스토리 — 한 칸이 검은 창 한 장면.
+// 내용은 여기만 고치면 바뀐다.
+const STORY: string[] = [
+  "옛날에 어느 한 최강의 용사가 있었다. 그 용사는 1735년에 태어나 현대까지 살았다.",
+  "어느 날, 적이 도시에 쳐들어왔다. 그 용사는 강력하지만 낡아서 제대로 된 힘을 내지 못하는 검을 들었다.",
+  "그 용사는 탱크에 타서 적들과 싸운다. 검을 고치려면 상점의 대장간에 가서 고치는 수밖에 없다.",
+  "도시를 잘 부탁한다.",
+];
+
 // 고수 모드를 켜면 이 단계부터 시작한다
 const HARD_START_STAGE = 7;
 
@@ -123,6 +132,7 @@ export default function GamePage() {
   const [hud, setHud] = useState<Hud>(INITIAL_HUD);
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const [muted, setMuted] = useState(false);
   // 시작 화면에서 고른 단계 (R키 핸들러에서도 읽어야 해서 ref로도 들고 있는다)
   const [stagePick, setStagePick] = useState(1);
@@ -140,6 +150,10 @@ export default function GamePage() {
   const [hardMode, setHardMode] = useState(false);
   const hardModeRef = useRef(false);
   // 튜토리얼 모드 (고수 모드와 동시에 켤 수 없다)
+  // 📖 스토리 (볼 때는 게임이 완전히 멈춘다)
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const storyOpenRef = useRef(false);
   const [tutorial, setTutorial] = useState(false);
   const tutorialRef = useRef(false);
 
@@ -166,6 +180,8 @@ export default function GamePage() {
           t.isContentEditable)
       )
         return;
+      // 📖 스토리를 보는 동안에는 게임 조작키가 하나도 먹지 않는다
+      if (storyOpenRef.current) return;
       const action = KEY_MAP[e.code];
       if (action) {
         e.preventDefault();
@@ -190,6 +206,7 @@ export default function GamePage() {
     const hide = () => {
       if (document.hidden) {
         game.setPaused(true);
+        pausedRef.current = true;
         setPaused(true);
       }
     };
@@ -260,6 +277,7 @@ export default function GamePage() {
     if (cheatUsedRef.current) game.setCheat(true);
     game.setPaused(false);
     setStarted(true);
+    pausedRef.current = false;
     setPaused(false);
   }, []);
 
@@ -298,10 +316,10 @@ export default function GamePage() {
   const togglePause = useCallback(() => {
     const game = gameRef.current;
     if (!game) return;
-    setPaused((p) => {
-      game.setPaused(!p);
-      return !p;
-    });
+    const next = !pausedRef.current;
+    pausedRef.current = next;
+    game.setPaused(next);
+    setPaused(next);
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -329,6 +347,52 @@ export default function GamePage() {
   const reroll = useCallback(() => {
     gameRef.current?.rerollShop();
   }, []);
+  // 📖 스토리를 열면 게임이 통째로 멈춘다
+  const openStory = useCallback(() => {
+    storyOpenRef.current = true;
+    setStoryIndex(0);
+    setStoryOpen(true);
+    gameRef.current?.setPaused(true);
+  }, []);
+
+  // Y — 스토리 끝내기 (멈춤을 풀고 게임으로 돌아간다)
+  const closeStory = useCallback(() => {
+    storyOpenRef.current = false;
+    setStoryOpen(false);
+    setStoryIndex(0);
+    gameRef.current?.setPaused(pausedRef.current);
+  }, []);
+
+  // H — 다음 장면 (마지막이면 끝)
+  const nextStory = useCallback(() => {
+    setStoryIndex((i) => {
+      if (i + 1 >= STORY.length) {
+        storyOpenRef.current = false;
+        setStoryOpen(false);
+        gameRef.current?.setPaused(pausedRef.current);
+        return 0;
+      }
+      return i + 1;
+    });
+  }, []);
+
+  // 📖 스토리를 보는 동안에만 H / Y 를 받는다
+  useEffect(() => {
+    if (!storyOpen) return;
+    const onStoryKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.code === "KeyH") {
+        e.preventDefault();
+        nextStory();
+      } else if (e.code === "KeyY") {
+        e.preventDefault();
+        closeStory();
+      }
+    };
+    window.addEventListener("keydown", onStoryKey);
+    return () => window.removeEventListener("keydown", onStoryKey);
+  }, [storyOpen, nextStory, closeStory]);
+
   const openDoor = useCallback(() => {
     gameRef.current?.enableAudio();
     gameRef.current?.openShopDoor();
@@ -341,6 +405,7 @@ export default function GamePage() {
   const restart = useCallback(() => {
     gameRef.current?.restart(stagePickRef.current);
     gameRef.current?.setPaused(false);
+    pausedRef.current = false;
     setPaused(false);
     resetCheat();
   }, [resetCheat]);
@@ -358,6 +423,7 @@ export default function GamePage() {
     gameRef.current?.restart(stagePickRef.current);
     gameRef.current?.setPaused(true);
     setStarted(false);
+    pausedRef.current = false;
     setPaused(false);
     resetCheat();
   }, [resetCheat]);
@@ -439,6 +505,16 @@ export default function GamePage() {
           >
             {paused ? "▶️" : "⏸️"}
           </button>
+          {hud.stage === 1 && !storyOpen && (
+            <button
+              type="button"
+              onClick={openStory}
+              className="rounded-lg border border-purple-300 bg-purple-50 px-2 py-1 text-purple-800"
+              aria-label="스토리"
+            >
+              📖 스토리
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleFullscreen}
@@ -664,6 +740,38 @@ export default function GamePage() {
           </div>
         )}
 
+        {/* 📖 스토리 — 화면 아래 검은 창. 보는 동안 게임은 완전히 멈춘다 */}
+        {storyOpen && (
+          <div className="absolute inset-0 z-40 flex flex-col justify-end bg-black/45">
+            <div className="m-2 rounded-xl border-2 border-slate-500 bg-black/95 p-3 shadow-2xl sm:m-4 sm:p-5">
+              <p className="min-h-[3.5rem] whitespace-pre-line text-[13px] leading-relaxed text-slate-100 sm:min-h-[5rem] sm:text-lg">
+                {STORY[storyIndex]}
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="text-[10px] text-slate-500 sm:text-xs">
+                  {storyIndex + 1} / {STORY.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={nextStory}
+                    className="rounded-lg border-2 border-slate-400 px-3 py-1.5 text-xs font-bold text-slate-100 hover:bg-slate-800 sm:text-sm"
+                  >
+                    H · 다음
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeStory}
+                    className="rounded-lg border-2 border-orange-400 bg-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-200 hover:bg-orange-500/30 sm:text-sm"
+                  >
+                    Y · 끝내기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 🏪 상점 — 3단계마다 열린다 */}
         {hud.phase === "shop" && (
           <div className="absolute inset-0 flex flex-col overflow-y-auto bg-slate-900/95 px-3 py-2 text-left">
@@ -794,7 +902,7 @@ export default function GamePage() {
           왼쪽 = 좌우 이동, 오른쪽 = 방어·점프·공격 */}
       {/* 버튼을 조건부로 없애면 안 된다 — 누르고 있는 중에 사라지면 손을 떼는 신호를
           받을 대상이 없어져서 입력이 눌린 채로 남는다(보스 격파 후 자동 공격 버그) */}
-      {started && (
+      {started && !storyOpen && (
         <div
           className={`pointer-events-none fixed inset-0 z-30 select-none transition-opacity lg:hidden ${
             (hud.phase === "playing" || hud.phase === "shop") && !paused
