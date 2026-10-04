@@ -215,6 +215,7 @@ const FLYER_ALLY_CHANCE = 0.6; // 물리쳤을 때 아군이 될 확률
 const FLYER_ALLY_CHANCE_DROP = 0.04; // 한 바퀴 돌 때마다 낮아지는 양
 const FLY_ALLY_HP = 16;
 const FLY_ALLY_HEAL = 5; // 단계가 끝날 때마다 회복
+const MAX_FLY_ALLIES = 10; // 하늘 아군은 이만큼까지만
 const LOOP_STAGE = 12; // 여기까지 깨면 처음부터 다시 시작한다
 const FORGE_SHIELD_EVERY = 10; // 몇 초마다 방어막이 1 생기는지
 const FORGE_SHIELD_MAX = 3; // 방어막은 이만큼까지만 쌓인다
@@ -815,6 +816,15 @@ export class TankGame {
     if (!good) return false;
     if (good.once && this.bought.includes(id)) return false;
     if (this.starCount < good.price) return false;
+    // 효과가 없는 구입은 막는다 (별만 날아가지 않게)
+    if (id === "ally" && this.allies.length >= this.allyCapacity()) {
+      this.setToast("아군이 이미 꽉 찼어요", 1.6);
+      return false;
+    }
+    if (good.kind === "food" && this.lives >= this.maxLives()) {
+      this.setToast("하트가 이미 가득해요", 1.6);
+      return false;
+    }
 
     this.starCount -= good.price;
     this.bought.push(id);
@@ -2003,7 +2013,10 @@ export class TankGame {
     for (let k = 0; k < FLYER_STARS; k++) this.dropStar(cx + (k ? 26 : -26), cy);
 
     // 확률에 따라 아군이 된다
-    if (Math.random() < this.flyerAllyChance) {
+    if (
+      Math.random() < this.flyerAllyChance &&
+      this.flyAllies.length < MAX_FLY_ALLIES
+    ) {
       this.flyAllies.push({
         x: cx,
         y: cy,
@@ -2124,6 +2137,20 @@ export class TankGame {
         continue;
       }
       // 보스 미사일은 아군 탱크도 맞힌다
+      // 하늘 아군도 미사일을 맞는다
+      const hitFly = this.flyAllies.find((a) =>
+        overlap(box, { x: a.x, y: a.y, w: a.w, h: a.h }),
+      );
+      if (hitFly) {
+        this.bullets.splice(i, 1);
+        this.boom(s.x, s.y, "#ef4444", 5);
+        if (hitFly.hurtCd <= 0) {
+          hitFly.hurtCd = ALLY_HIT_CD;
+          hitFly.hp -= ALLY_DMG_BULLET;
+          this.boom(hitFly.x + hitFly.w / 2, hitFly.y + hitFly.h / 2, "#38bdf8", 8);
+        }
+        continue;
+      }
       const hitAlly = this.allies.find((a) => overlap(box, a));
       if (hitAlly) {
         this.bullets.splice(i, 1);
