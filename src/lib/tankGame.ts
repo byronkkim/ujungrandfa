@@ -821,6 +821,8 @@ export class TankGame {
 
   // 아이템 쓰기 (M 키 또는 🎒 버튼)
   useItem(): boolean {
+    // 상점·클리어·게임오버 화면이나 멈춤 상태에서는 쓰지 못한다(괜히 낭비되지 않게)
+    if (this.phase !== "playing" || this.paused) return false;
     const good = this.nextItem();
     if (!good) return false;
     this.items[good.id] -= 1;
@@ -1148,6 +1150,7 @@ export class TankGame {
       this.shopFirePrev = this.input.fire;
       if (firePressed) {
         this.openShopDoor();
+        this.pushHud(); // 문이 열린 걸 화면에 바로 알린다
         return;
       }
       this.updateParticles(dt);

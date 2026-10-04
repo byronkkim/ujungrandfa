@@ -534,7 +534,7 @@ export default function GamePage() {
         )}
 
         {/* 🎓 튜토리얼 안내 — 하나씩 해보면 다음 내용으로 넘어간다 */}
-        {started && hud.tutorial && hud.tutorialText && (
+        {started && hud.phase === "playing" && hud.tutorial && hud.tutorialText && (
           <div
             className={`pointer-events-none absolute inset-x-0 mx-auto w-[92%] max-w-md ${
               hud.bossActive ? "top-14" : "top-2"
@@ -748,7 +748,7 @@ export default function GamePage() {
         )}
 
         {/* 단계 클리어 / 게임 오버 */}
-        {hud.phase !== "playing" && (
+        {(hud.phase === "clear" || hud.phase === "gameover") && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/60 text-center">
             {hud.phase === "clear" ? (
               <>
