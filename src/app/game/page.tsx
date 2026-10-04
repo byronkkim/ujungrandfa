@@ -33,6 +33,9 @@ const PAD_BIG =
 // 고수 모드를 켜면 이 단계부터 시작한다
 const HARD_START_STAGE = 7;
 
+// 시작 화면에 보여줄 단계 수 (1단계만 보이게 — 나머지는 깨면서 올라간다)
+const VISIBLE_STAGES = 1;
+
 const INITIAL_HUD: Hud = {
   stage: 1,
   form: "tank",
@@ -204,6 +207,9 @@ export default function GamePage() {
       setTutorial(false);
       stagePickRef.current = HARD_START_STAGE;
       setStagePick(HARD_START_STAGE);
+    } else {
+      stagePickRef.current = 1;
+      setStagePick(1);
     }
     gameRef.current?.setHardMode(on);
     gameRef.current?.restart(stagePickRef.current);
@@ -515,10 +521,10 @@ export default function GamePage() {
 
             {/* 시작할 단계 고르기 */}
             <p className="text-[11px] font-bold text-slate-200 sm:text-xs">
-              몇 단계부터 시작할까요?
+              {VISIBLE_STAGES > 1 ? "몇 단계부터 시작할까요?" : "시작 단계"}
             </p>
             <div className="flex flex-wrap justify-center gap-1 sm:gap-1.5">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              {Array.from({ length: VISIBLE_STAGES }, (_, i) => i + 1).map((n) => (
                 <button
                   key={n}
                   type="button"
@@ -534,9 +540,11 @@ export default function GamePage() {
                 </button>
               ))}
             </div>
-            <p className="hidden text-[11px] text-slate-400 sm:block">
-              단계가 높으면 적과 보스가 더 강해요
-            </p>
+            {VISIBLE_STAGES > 1 && (
+              <p className="hidden text-[11px] text-slate-400 sm:block">
+                단계가 높으면 적과 보스가 더 강해요
+              </p>
+            )}
 
             {/* 튜토리얼 모드 */}
             <label

@@ -389,14 +389,14 @@ function generateLevel(stage: number): Level {
       const w = 220 + rnd() * 150;
       const at = x;
       push(w);
-      stars.push({ x: at + w * 0.5, y: gy - 46 });
+      if (up) stars.push({ x: at + w * 0.5, y: gy - 46 }); // 올라간 계단만 보상
       if (rnd() < enemyChance) spawns.push({ x: at + w * 0.5, y: gy - 40 });
     } else {
       // 평지
       const w = 320 + rnd() * 220;
       const at = x;
       push(w);
-      if (rnd() < 0.7) stars.push({ x: at + w * 0.3, y: gy - 46 });
+      if (rnd() < 0.3) stars.push({ x: at + w * 0.3, y: gy - 46 });
       if (rnd() < enemyChance) spawns.push({ x: at + w * 0.4, y: gy - 40 });
       if (rnd() < enemyChance * 0.5)
         spawns.push({ x: at + w * 0.8, y: gy - 40 });
