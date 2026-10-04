@@ -959,8 +959,9 @@ export class TankGame {
     this.city = generateCity(this.level.length, 4242 + stage);
     this.phase = "playing";
     this.phaseTimer = 0;
-    // 단계마다 하트 다시 채움 (검사는 3개, 치트키 발동 시 2배)
-    this.lives = this.maxLives();
+    // 단계를 깨도 하트는 회복되지 않는다 — 가진 그대로 다음 단계로 간다.
+    // 새 판(restart)으로 시작할 때만 가득 채운다.
+    this.lives = keepAllies ? Math.min(this.lives, this.maxLives()) : this.maxLives();
 
     const size = PLAYER_SIZE[this.form];
     this.player = {
