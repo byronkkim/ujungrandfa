@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   SHOP_GOODS,
+  FORGE_REPAIR_PRICE,
   SHOP_REROLL_PRICE,
   TankGame,
   VIEW_H,
@@ -76,6 +77,8 @@ const INITIAL_HUD: Hud = {
   itemIcon: "",
   itemCount: 0,
   bestStage: 0,
+  inForge: false,
+  swordFixed: false,
   charge: 0,
   enemies: 0,
   stars: 0,
@@ -392,6 +395,14 @@ export default function GamePage() {
     window.addEventListener("keydown", onStoryKey);
     return () => window.removeEventListener("keydown", onStoryKey);
   }, [storyOpen, nextStory, closeStory]);
+
+  // 🔨 대장간 (검사만 들어갈 수 있다 — 탱크가 눌러도 아무 일도 안 일어남)
+  const enterForge = useCallback(() => {
+    gameRef.current?.enterForge();
+  }, []);
+  const repairSword = useCallback(() => {
+    gameRef.current?.repairSword();
+  }, []);
 
   const openDoor = useCallback(() => {
     gameRef.current?.enableAudio();
@@ -772,6 +783,71 @@ export default function GamePage() {
           </div>
         )}
 
+        {/* 🔨 대장간 — 상점 안의 가게. 검사만 들어올 수 있다 */}
+        {hud.phase === "shop" && hud.inForge && (
+          <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-[#2a1810] px-3 py-2 text-left">
+            <div className="mb-1 flex shrink-0 items-center justify-between gap-2">
+              <p className="text-sm font-bold text-orange-300 sm:text-xl">
+                🔨 대장간
+              </p>
+              <p className="text-sm font-bold text-yellow-200 sm:text-lg">
+                ⭐ {hud.stars}
+              </p>
+            </div>
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+              <p className="text-3xl sm:text-5xl">⚒️🔥</p>
+              {hud.swordFixed ? (
+                <p className="text-[12px] font-bold text-sky-300 sm:text-base">
+                  ⚔️ 검은 이미 고쳐졌다. 파란 검의 힘이 함께한다!
+                </p>
+              ) : (
+                <>
+                  <p className="text-[11px] text-orange-200/90 sm:text-sm">
+                    낡은 검을 고쳐드립니다
+                  </p>
+                  <button
+                    type="button"
+                    onClick={repairSword}
+                    disabled={hud.stars < FORGE_REPAIR_PRICE}
+                    className={`rounded-xl border-2 px-4 py-2 text-left transition ${
+                      hud.stars < FORGE_REPAIR_PRICE
+                        ? "border-slate-700 bg-black/40 text-slate-500"
+                        : "border-sky-400 bg-sky-900/40 text-sky-100 hover:bg-sky-800/50"
+                    }`}
+                  >
+                    <span className="block text-[12px] font-bold sm:text-base">
+                      ⚔️ 검 고치기{" "}
+                      <span className="text-yellow-300">
+                        ⭐{FORGE_REPAIR_PRICE}
+                      </span>
+                    </span>
+                    <span className="block text-[9px] font-normal opacity-80 sm:text-xs">
+                      10초마다 방어막 1개 · 필살기 칼날이 더 커짐 · 파란 검
+                    </span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="mt-1.5 flex shrink-0 justify-end">
+              <button
+                type="button"
+                onClick={openDoor}
+                className="flex items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-700/60 px-4 py-2 text-sm font-bold text-amber-50 shadow transition hover:bg-amber-600/70"
+              >
+                <span className="text-2xl leading-none">🚪</span>
+                <span className="text-left leading-tight">
+                  문
+                  <span className="block text-[10px] font-normal opacity-90">
+                    공격하면 상점으로 (● / X)
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 🏪 상점 — 3단계마다 열린다 */}
         {hud.phase === "shop" && (
           <div className="absolute inset-0 flex flex-col overflow-y-auto bg-slate-900/95 px-3 py-2 text-left">
@@ -829,7 +905,18 @@ export default function GamePage() {
               ))}
             </div>
 
-            <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2">
+            <div className="mt-1.5 flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              <button
+                type="button"
+                onClick={enterForge}
+                className={`rounded-xl border-2 px-3 py-2 text-[11px] font-bold transition sm:text-sm ${
+                  hud.form === "sword"
+                    ? "border-orange-400 bg-orange-900/50 text-orange-100 hover:bg-orange-800/60"
+                    : "border-slate-700 bg-slate-800/50 text-slate-500"
+                }`}
+              >
+                🔨 대장간
+              </button>
               <button
                 type="button"
                 onClick={reroll}

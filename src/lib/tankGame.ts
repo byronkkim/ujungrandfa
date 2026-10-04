@@ -204,6 +204,12 @@ export const SHOP_GOODS: ShopGood[] = [
 // 상점에서 한 번에 보여줄 품목 수(분류당 1개)와 다시 뽑는 값
 export const SHOP_REROLL_PRICE = 3;
 
+// 🔨 대장간 — 검사만 들어갈 수 있다. 낡은 검을 고치면 능력이 붙는다.
+export const FORGE_REPAIR_PRICE = 50;
+const FORGE_SHIELD_EVERY = 10; // 몇 초마다 방어막이 1 생기는지
+const FORGE_SHIELD_MAX = 3; // 방어막은 이만큼까지만 쌓인다
+const FORGE_BLADE_SCALE = 1.6; // 고친 검의 필살기(거대 칼날)가 커지는 배율
+
 // 깬 단계 기록은 이 기기(브라우저)에만 저장한다
 const BEST_STAGE_KEY = "ujuTank.bestStage";
 
@@ -239,6 +245,8 @@ export type Hud = {
   itemIcon: string; // 다음에 쓸 아이템 그림 (없으면 "")
   itemCount: number; // 가방에 든 아이템 총 개수
   bestStage: number; // 지금까지 깬 가장 높은 단계
+  inForge: boolean; // 🔨 대장간 화면인지
+  swordFixed: boolean; // 검을 고쳤는지
   charge: number; // 0~1
   enemies: number;
   stars: number;
@@ -647,6 +655,9 @@ export class TankGame {
   private bonusLives = 0; // 전리품으로 늘린 하트 최대치
   private bought: string[] = []; // 이번 판에 산 품목
   private shopOffer: string[] = []; // 지금 상점에 걸린 품목(분류당 1개)
+  private inForge = false; // 🔨 대장간 화면에 들어와 있는지
+  private swordFixed = false; // 검을 고쳤는지
+  private forgeShieldCd = 0; // 방어막이 다시 생기기까지
   private shopFirePrev = true; // 상점 문: 발사 버튼을 "새로" 눌렀는지 보려고
   private magnetTimer = 0; // 자석 남은 시간
   private fastReload = false; // 전리품: 빠른 장전
@@ -870,9 +881,42 @@ export class TankGame {
     return true;
   }
 
+  // 🔨 대장간 — 검사만 들어갈 수 있다 (탱크가 누르면 아무 일도 일어나지 않는다)
+  enterForge(): boolean {
+    if (this.phase !== "shop" || this.form !== "sword") return false;
+    this.inForge = true;
+    this.pushHud();
+    return true;
+  }
+
+  exitForge() {
+    this.inForge = false;
+    this.pushHud();
+  }
+
+  // 낡은 검 고치기 — 10초마다 방어막 1, 필살기 칼날이 커지고 파래진다
+  repairSword(): boolean {
+    if (!this.inForge || this.swordFixed) return false;
+    if (this.starCount < FORGE_REPAIR_PRICE) return false;
+    this.starCount -= FORGE_REPAIR_PRICE;
+    this.swordFixed = true;
+    this.forgeShieldCd = FORGE_SHIELD_EVERY;
+    this.sfx.transform();
+    this.setToast("🔨 검을 고쳤다! 파란 검의 힘 ⚔️", 3);
+    this.pushHud();
+    return true;
+  }
+
   // 🚪 상점 문 — 공격하면 열린다
   openShopDoor() {
     if (this.phase !== "shop") return;
+    // 대장간 안에서 문을 치면 상점으로 돌아간다
+    if (this.inForge) {
+      this.exitForge();
+      this.sfx.guard();
+      this.setToast("🏪 상점으로 돌아왔다", 1.4);
+      return;
+    }
     this.sfx.boom();
     this.shake = 14;
     this.setToast("🚪 문이 열렸다!", 1.6);
@@ -943,6 +987,9 @@ export class TankGame {
     this.bonusLives = 0;
     this.bought = [];
     this.shopOffer = [];
+    this.inForge = false;
+    this.swordFixed = false;
+    this.forgeShieldCd = 0;
     this.magnetTimer = 0;
     this.fastReload = false;
     this.starBonus = false;
@@ -1151,7 +1198,7 @@ export class TankGame {
       this.shopFirePrev = this.input.fire;
       if (firePressed) {
         this.openShopDoor();
-        this.pushHud(); // 문이 열린 걸 화면에 바로 알린다
+        this.pushHud();
         return;
       }
       this.updateParticles(dt);
@@ -1172,6 +1219,18 @@ export class TankGame {
     }
 
     if (this.magnetTimer > 0) this.magnetTimer -= dt;
+    // 🔨 고친 검은 10초마다 방어막을 하나씩 만들어 준다
+    if (this.swordFixed) {
+      this.forgeShieldCd -= dt;
+      if (this.forgeShieldCd <= 0) {
+        this.forgeShieldCd = FORGE_SHIELD_EVERY;
+        if (this.shieldCharges < FORGE_SHIELD_MAX) {
+          this.shieldCharges += 1;
+          this.sfx.guard();
+          this.setToast("🛡️ 파란 검이 방어막을 만들었다!", 1.4);
+        }
+      }
+    }
     this.updatePlayer(dt);
     this.updateStars();
     this.updateWeapons(dt);
@@ -1446,7 +1505,13 @@ export class TankGame {
         this.blades.splice(i, 1);
         continue;
       }
-      const box: Rect = { x: b.x - 40, y: b.y - 46, w: 80, h: 92 };
+      const k = this.swordFixed ? FORGE_BLADE_SCALE : 1; // 고친 검은 칼날이 커진다
+      const box: Rect = {
+        x: b.x - 40 * k,
+        y: b.y - 46 * k,
+        w: 80 * k,
+        h: 92 * k,
+      };
 
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const e = this.enemies[j];
@@ -2014,6 +2079,8 @@ export class TankGame {
       itemIcon: this.nextItem()?.icon ?? "",
       itemCount: Object.values(this.items).reduce((a, b) => a + b, 0),
       bestStage: this.bestStage,
+      inForge: this.inForge,
+      swordFixed: this.swordFixed,
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
@@ -2025,7 +2092,7 @@ export class TankGame {
     };
     const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
-    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}`;
+    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}|${hud.inForge}|${hud.swordFixed}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);
@@ -2312,7 +2379,7 @@ export class TankGame {
       ctx.translate(cx + dir * 11, y + 24 + bob);
       ctx.rotate(dir > 0 ? -0.75 : 0.75 + Math.PI);
     }
-    ctx.fillStyle = "#cbd5e1";
+    ctx.fillStyle = this.swordFixed ? "#38bdf8" : "#cbd5e1"; // 고친 검은 파랗다
     ctx.beginPath();
     ctx.moveTo(0, -3.5);
     ctx.lineTo(30, -2.5);
@@ -2380,10 +2447,14 @@ export class TankGame {
       ctx.save();
       ctx.translate(x, b.y);
       // 지나온 자리에 남는 불꽃 꼬리 (뒤로 갈수록 옅어지게)
+      const blue = this.swordFixed;
       const tail = ctx.createLinearGradient(-b.dir * 120, 0, 0, 0);
-      tail.addColorStop(0, "rgba(251,146,60,0)");
-      tail.addColorStop(0.6, "rgba(251,146,60,0.35)");
-      tail.addColorStop(1, "rgba(253,224,71,0.7)");
+      tail.addColorStop(0, blue ? "rgba(56,189,248,0)" : "rgba(251,146,60,0)");
+      tail.addColorStop(
+        0.6,
+        blue ? "rgba(56,189,248,0.4)" : "rgba(251,146,60,0.35)",
+      );
+      tail.addColorStop(1, blue ? "rgba(186,230,253,0.8)" : "rgba(253,224,71,0.7)");
       ctx.fillStyle = tail;
       ctx.beginPath();
       ctx.moveTo(-b.dir * 120, -3);
@@ -2394,26 +2465,29 @@ export class TankGame {
       ctx.fill();
 
       ctx.rotate(b.spin * b.dir);
-      // 바깥 광채
-      ctx.strokeStyle = "rgba(251,146,60,0.85)";
-      ctx.lineWidth = 6;
+      const k = this.swordFixed ? FORGE_BLADE_SCALE : 1; // 고친 검은 더 크다
+      // 바깥 광채 (고친 검은 파란색)
+      ctx.strokeStyle = this.swordFixed
+        ? "rgba(56,189,248,0.95)"
+        : "rgba(251,146,60,0.85)";
+      ctx.lineWidth = 6 * k;
       // 초승달 모양 칼날
       const crescent = () => {
         ctx.beginPath();
-        ctx.arc(0, 0, 40, -1.05, 1.05);
-        ctx.arc(20, 0, 34, 1.15, -1.15, true);
+        ctx.arc(0, 0, 40 * k, -1.05, 1.05);
+        ctx.arc(20 * k, 0, 34 * k, 1.15, -1.15, true);
         ctx.closePath();
       };
       crescent();
       ctx.stroke();
-      ctx.fillStyle = "#e2e8f0";
+      ctx.fillStyle = this.swordFixed ? "#bae6fd" : "#e2e8f0";
       crescent();
       ctx.fill();
       // 날 선
-      ctx.strokeStyle = "#f8fafc";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = this.swordFixed ? "#e0f2fe" : "#f8fafc";
+      ctx.lineWidth = 3 * k;
       ctx.beginPath();
-      ctx.arc(0, 0, 37, -0.95, 0.95);
+      ctx.arc(0, 0, 37 * k, -0.95, 0.95);
       ctx.stroke();
       ctx.restore();
     }
