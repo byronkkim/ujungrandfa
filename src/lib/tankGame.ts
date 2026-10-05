@@ -1332,7 +1332,7 @@ export class TankGame {
       }
     }
     this.updatePlayer(dt);
-    this.updateStars();
+    this.updateStars(dt);
     this.updateWeapons(dt);
     this.updateSwings(dt);
     this.updateBlades(dt);
@@ -1421,13 +1421,28 @@ export class TankGame {
   }
 
   // 별 줍기 (별 모으기 앱이니까 게임에서도 별을 모은다)
-  private updateStars() {
+  private updateStars(dt: number) {
     const p = this.player;
-    const reach = this.magnetTimer > 0 ? 170 : 40; // 🧲 자석이면 멀리서도 끌려온다
+    const magnet = this.magnetTimer > 0;
+    const reach = magnet ? 60 : 40;
+    const px = p.x + p.w / 2;
+    const py = p.y + p.h / 2;
     for (const s of this.starPickups) {
       if (s.taken) continue;
-      if (Math.abs(s.x - (p.x + p.w / 2)) > reach) continue;
-      if (Math.abs(s.y - (p.y + p.h / 2)) > reach) continue;
+      // 🧲 자석: 화면에 보이는 별을 모두 끌어당긴다
+      if (magnet) {
+        const sx = s.x - this.camX;
+        if (sx > -60 && sx < VIEW_W + 60) {
+          const dx = px - s.x;
+          const dy = py - s.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const step = Math.min(len, 620 * dt);
+          s.x += (dx / len) * step;
+          s.y += (dy / len) * step;
+        }
+      }
+      if (Math.abs(s.x - px) > reach) continue;
+      if (Math.abs(s.y - py) > reach) continue;
       s.taken = true;
       this.starCount += this.starBonus ? 2 : 1; // 👜 별주머니면 2개로
       this.tut.star = true;
@@ -1886,7 +1901,7 @@ export class TankGame {
       }
       if (overlap(e, p)) {
         const blocked = this.guarding;
-        this.hurtPlayer(false);
+        this.hurtPlayer(false, e.x + e.w / 2);
         // 막고 있으면 부딪힌 적을 튕겨낸다
         if (blocked) {
           e.x += (e.x + e.w / 2 < p.x + p.w / 2 ? -1 : 1) * 30;
@@ -1968,10 +1983,11 @@ export class TankGame {
     for (let i = this.flyers.length - 1; i >= 0; i--) {
       const fl = this.flyers[i];
       fl.bob += dt * 1.6;
-      // 아래로 내려올 때는 평지에 닿고, 위로는 높이 올라간다
+      // 위로는 화면 꼭대기, 아래로는 땅바닥까지 끝까지 오르내린다.
+      // (접시 그림의 아랫면이 땅에 닿도록 보정)
       const ground = this.groundTopAt(fl.x + fl.w / 2) ?? 420;
-      const low = ground - fl.h; // 바닥에 닿는 높이
-      const high = low - 230; // 가장 높이 올라갔을 때
+      const low = ground - fl.h * 0.75 - 4; // 접시 아랫면이 땅에 닿는 높이
+      const high = 8; // 화면 맨 위
       const mid = (low + high) / 2;
       fl.y = mid + Math.sin(fl.bob) * ((low - high) / 2);
       fl.baseY = mid;
@@ -2113,7 +2129,7 @@ export class TankGame {
       this.shake = Math.max(this.shake, 4);
     }
 
-    if (overlap(b, p)) this.hurtPlayer(false);
+    if (overlap(b, p)) this.hurtPlayer(false, b.x + b.w / 2);
   }
 
   private updateBullets(dt: number) {
@@ -2135,7 +2151,7 @@ export class TankGame {
       }
       if (overlap(box, p)) {
         this.bullets.splice(i, 1);
-        this.hurtPlayer(false);
+        this.hurtPlayer(false, s.x);
         continue;
       }
       // 보스 미사일은 아군 탱크도 맞힌다
@@ -2171,12 +2187,16 @@ export class TankGame {
     for (let i = 0; i < 12; i++) this.spark(x, y, i % 2 ? "#fde047" : "#e2e8f0");
   }
 
-  private hurtPlayer(fatal: boolean) {
+  // fromX: 공격이 날아온 x 위치 (없으면 방향을 따지지 않는다)
+  private hurtPlayer(fatal: boolean, fromX?: number) {
     const p = this.player;
     if (p.invuln > 0 && !fatal) return;
 
-    // 검사가 직접 막고 있으면 공짜로 막는다 (방어막을 쓰지 않는다)
-    if (this.guarding && !fatal) {
+    // 검사가 직접 막고 있으면 공짜로 막는다 (방어막을 쓰지 않는다).
+    // 단, 바라보는 쪽에서 온 공격만 막을 수 있다 — 뒤에서 오면 못 막는다.
+    const fromFront =
+      fromX === undefined || Math.sign(fromX - (p.x + p.w / 2)) !== -p.dir;
+    if (this.guarding && !fatal && fromFront) {
       this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
       return;
     }
