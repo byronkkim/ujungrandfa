@@ -2175,7 +2175,13 @@ export class TankGame {
     const p = this.player;
     if (p.invuln > 0 && !fatal) return;
 
-    // 상점에서 산 방어막이 켜져 있으면 대신 막아준다
+    // 검사가 직접 막고 있으면 공짜로 막는다 (방어막을 쓰지 않는다)
+    if (this.guarding && !fatal) {
+      this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
+      return;
+    }
+
+    // 막고 있지 않을 때만, 상점에서 산 방어막이 대신 막아준다
     if (this.shieldCharges > 0 && !fatal) {
       this.shieldCharges -= 1;
       this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
@@ -2186,12 +2192,6 @@ export class TankGame {
           : "🛡️ 방어막이 다 됐어요",
         1.4,
       );
-      return;
-    }
-
-    // 검사가 막고 있으면 일반 피해는 통하지 않는다
-    if (this.guarding && !fatal) {
-      this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
       return;
     }
 
