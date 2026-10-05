@@ -379,7 +379,12 @@ type Particle = {
 
 type Building = { x: number; y: number; w: number; h: number; seed: number };
 
-type StarPickup = { x: number; y: number; taken: boolean };
+type StarPickup = {
+  x: number;
+  y: number;
+  taken: boolean;
+  vy?: number; // 적이 떨군 별은 바닥으로 떨어진다 (맵에 놓인 별은 떠 있음)
+};
 
 type Level = {
   platforms: Platform[];
@@ -1417,7 +1422,8 @@ export class TankGame {
 
   // 적을 물리친 자리에 별 1개를 떨군다
   private dropStar(x: number, y: number) {
-    this.starPickups.push({ x, y: y - 10, taken: false });
+    // 공중에서 죽어도 별이 바닥까지 떨어져 주울 수 있게 vy 를 준다
+    this.starPickups.push({ x, y: y - 10, taken: false, vy: 0 });
   }
 
   // 별 줍기 (별 모으기 앱이니까 게임에서도 별을 모은다)
@@ -1429,6 +1435,20 @@ export class TankGame {
     const py = p.y + p.h / 2;
     for (const s of this.starPickups) {
       if (s.taken) continue;
+      // 적이 떨군 별은 바닥에 닿을 때까지 떨어진다
+      if (s.vy !== undefined) {
+        s.vy += GRAVITY * 0.45 * dt;
+        s.y += s.vy * dt;
+        const ground = this.groundTopAt(s.x);
+        if (ground !== null && s.y > ground - 16) {
+          s.y = ground - 16;
+          s.vy = 0;
+        } else if (s.y > VIEW_H + 300) {
+          s.taken = true; // 구멍으로 떨어진 별은 사라진다
+          continue;
+        }
+      }
+
       // 🧲 자석: 화면에 보이는 별을 모두 끌어당긴다
       if (magnet) {
         const sx = s.x - this.camX;
