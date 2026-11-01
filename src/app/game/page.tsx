@@ -89,6 +89,8 @@ const INITIAL_HUD: Hud = {
   enemies: 0,
   stars: 0,
   bossActive: false,
+  bossSuper: false,
+  bossPage: 1,
   bossHp: 0,
   bossMaxHp: 1,
   phase: "playing",
@@ -604,7 +606,7 @@ export default function GamePage() {
         {hud.bossActive && (
           <div className="pointer-events-none absolute inset-x-0 top-2 mx-auto w-[70%]">
             <div className="mb-1 text-center text-xs font-bold text-white drop-shadow">
-              👹 보스
+              {hud.bossSuper ? `👹👹 보스2 — ${hud.bossPage}페이지` : "👹 보스"}
             </div>
             <div className="h-4 w-full overflow-hidden rounded-full border-2 border-white/70 bg-black/40">
               <div

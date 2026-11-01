@@ -84,6 +84,17 @@ export type PlayerForm = "tank" | "sword";
 // 🏪 상점 — 3단계마다 열린다. 모은 ⭐가 돈이다.
 export const SHOP_EVERY = 3;
 
+// 👹👹 보스2 — 상점 다음 단계(4·7·10)와 12단계에 나오는 아주 강한 보스
+const BOSS2_HP_MULT = 4; // 보스1보다 훨씬 두껍다
+const BOSS2_DMG_PERCENT = 0.14; // 맞으면 내 체력의 14%가 깎인다
+const BOSS2_PAGE_AT = [0.3, 0.6]; // 이만큼 깎이면 다음 페이지
+const BOSS2_SPAWN_EACH = 4; // 페이지가 바뀔 때 나오는 적/UFO 수
+const BOSS2_COLORS = [
+  { body: "#dc2626", turret: "#7f1d1d" }, // 1페이지 빨강
+  { body: "#7c3aed", turret: "#4c1d95" }, // 2페이지 보라
+  { body: "#0f766e", turret: "#134e4a" }, // 3페이지 청록
+];
+
 export type ShopKind = "item" | "loot" | "food";
 export type ShopGood = {
   id: string;
@@ -245,6 +256,8 @@ export type Hud = {
   enemies: number;
   stars: number;
   bossActive: boolean;
+  bossSuper: boolean; // 보스2인지
+  bossPage: number; // 보스2 페이지
   bossHp: number;
   bossMaxHp: number;
   phase: "playing" | "clear" | "gameover" | "shop";
@@ -303,9 +316,22 @@ type Blade = {
   spin: number;
 };
 
-type Bullet = { x: number; y: number; vx: number; vy: number; life: number };
+type Bullet = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  heavy?: boolean; // 보스2의 공격 — 체력의 14%를 깎는다
+};
 
-type Enemy = Body & { hp: number; maxHp: number; dir: number; hopCd: number };
+type Enemy = Body & {
+  hp: number;
+  maxHp: number;
+  dir: number;
+  hopCd: number;
+  noReward?: boolean; // 보스2가 부른 적 — 별도 아군도 안 준다
+};
 type Ally = Body & {
   cool: number;
   offset: number;
@@ -315,6 +341,8 @@ type Ally = Body & {
   hurtCd: number;
 };
 type Boss = Body & {
+  kind: "normal" | "super"; // 보스1 / 보스2
+  page: number; // 보스2의 페이지(1~3)
   hp: number;
   maxHp: number;
   dir: number;
@@ -334,6 +362,7 @@ type Flyer = {
   shootCd: number;
   w: number;
   h: number;
+  noReward?: boolean; // 보스2가 부른 UFO
 };
 
 type FlyAlly = {
@@ -718,7 +747,8 @@ export class TankGame {
   private shieldGen = false; // 🔋 방어막 발전기
   private shieldGenCd = 0;
   private startShield = false; // 🏁 출발 방어막
-  private reviveLeft = 0; // 💘 부활의 깃털
+  private reviveLeft = 0;
+  private hurtAccum = 0; // 보스2 피해 누적(하트 단위) // 💘 부활의 깃털
   private stageStarBonus = false; // 🌟 별 보너스
   private allyToolbox = false; // 🧰 수리 도구
 
@@ -1039,10 +1069,10 @@ export class TankGame {
           const sx = e.x - this.camX;
           if (sx < -40 || sx > VIEW_W + 40) continue;
           this.enemies.splice(i, 1);
-          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+          if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#fde047", 14);
           hit += 1;
-          this.maybeAlly();
+          if (!e.noReward) this.maybeAlly();
         }
         for (let j = this.flyers.length - 1; j >= 0; j--) {
           const fl = this.flyers[j];
@@ -1109,7 +1139,7 @@ export class TankGame {
           if (Math.sign(e.x + e.w / 2 - cx) !== p.dir) continue;
           if (Math.abs(e.x - cx) > 520) continue;
           this.enemies.splice(j, 1);
-          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+          if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#f97316", 16);
           hit += 1;
         }
@@ -1174,7 +1204,7 @@ export class TankGame {
           const sx = e.x - this.camX;
           if (sx < -60 || sx > VIEW_W + 60) continue;
           this.enemies.splice(j, 1);
-          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+          if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#f97316", 18);
           hit += 1;
         }
@@ -1403,6 +1433,7 @@ export class TankGame {
     this.shieldGenCd = 0;
     this.startShield = false;
     this.reviveLeft = 0;
+    this.hurtAccum = 0;
     this.stageStarBonus = false;
     this.allyToolbox = false;
     this.allies = [];
@@ -1517,17 +1548,20 @@ export class TankGame {
             (1 + 0.5 * (stage - 1)) *
             (this.hard ? HARD_BOSS_MULT : 1),
         );
+    const superBoss = this.isSuperStage(stage);
     this.boss = {
+      kind: superBoss ? "super" : "normal",
+      page: 1,
       x: this.level.bossX,
-      y: this.level.bossY - 118,
-      w: 132,
-      h: 118,
+      y: this.level.bossY - (superBoss ? 150 : 118),
+      w: superBoss ? 172 : 132,
+      h: superBoss ? 150 : 118,
       vx: 0,
       vy: 0,
       onGround: false,
       blocked: false,
-      hp: bossMax,
-      maxHp: bossMax,
+      hp: bossMax * (superBoss ? BOSS2_HP_MULT : 1),
+      maxHp: bossMax * (superBoss ? BOSS2_HP_MULT : 1),
       dir: -1,
       shootCd: 2,
       hurt: 0,
@@ -1640,7 +1674,7 @@ export class TankGame {
       this.updateParticles(dt);
       if (this.phaseTimer <= 0) {
         // 3단계마다 상점이 열린다
-        if (this.stage % SHOP_EVERY === 0) {
+        if (this.isShopStage(this.stage)) {
           this.phase = "shop";
           this.rollShop();
           this.shopFirePrev = true; // 손을 뗐다가 다시 눌러야 문이 열린다
@@ -2054,10 +2088,10 @@ export class TankGame {
         e.hp -= 1;
         if (e.hp <= 0) {
           this.enemies.splice(j, 1);
-          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+          if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#a855f7", 14);
           this.sfx.boom();
-          this.maybeAlly();
+          if (!e.noReward) this.maybeAlly();
         } else {
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#e2e8f0", 5);
         }
@@ -2102,11 +2136,11 @@ export class TankGame {
         const e = this.enemies[j];
         if (!overlap(box, e)) continue;
         this.enemies.splice(j, 1); // 체력 무시하고 즉사
-        this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+        if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
         this.boom(e.x + e.w / 2, e.y + e.h / 2, "#e2e8f0", 16);
         this.boom(e.x + e.w / 2, e.y + e.h / 2, "#a855f7", 10);
         this.sfx.boom();
-        this.maybeAlly();
+        if (!e.noReward) this.maybeAlly();
       }
 
       const boss = this.boss;
@@ -2158,10 +2192,10 @@ export class TankGame {
         e.hp -= ehpDmg(m);
         if (e.hp <= 0) {
           this.enemies.splice(j, 1);
-          this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+          if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
           this.boom(e.x + e.w / 2, e.y + e.h / 2, "#a855f7", 14);
           this.sfx.boom();
-          this.maybeAlly();
+          if (!e.noReward) this.maybeAlly();
         } else {
           this.boom(m.x, m.y, "#fbbf24", 5);
         }
@@ -2202,6 +2236,7 @@ export class TankGame {
     this.shake = 10;
     this.sfx.hitBoss();
     if (b.hp <= 0) this.killBoss(b);
+    else this.checkBossPage();
   }
 
   // 아군 탱크의 미사일 — 약하게 깎고, 콤보 계산에는 끼지 않는다
@@ -2213,6 +2248,56 @@ export class TankGame {
     b.hurt = 0.15;
     this.sfx.hitBoss();
     if (b.hp <= 0) this.killBoss(b);
+    else this.checkBossPage();
+  }
+
+  // 👹👹 보스2 페이지 전환 — 30%, 60% 깎일 때마다 다음 페이지
+  private checkBossPage() {
+    const b = this.boss;
+    if (!b || b.kind !== "super") return;
+    const lost = 1 - b.hp / b.maxHp;
+    let page = 1;
+    for (const t of BOSS2_PAGE_AT) if (lost >= t) page += 1;
+    if (page === b.page) return;
+
+    b.page = page;
+    b.hurt = 0.4;
+    this.shake = 26;
+    this.sfx.transform();
+    this.setToast(`👹 보스2 — ${page}페이지!`, 2.5);
+
+    // 색이 바뀌고, 적과 UFO가 4마리씩 나온다 (별도 아군도 안 준다)
+    const px = this.player.x;
+    for (let i = 0; i < BOSS2_SPAWN_EACH; i++) {
+      this.enemies.push({
+        x: px + (i % 2 === 0 ? -200 - i * 60 : 240 + i * 60),
+        y: 60,
+        w: 38,
+        h: 32,
+        vx: 0,
+        vy: 0,
+        onGround: false,
+        blocked: false,
+        hp: Math.min(this.stage, 3),
+        maxHp: Math.min(this.stage, 3),
+        dir: 1,
+        hopCd: 0,
+        noReward: true,
+      });
+      this.flyers.push({
+        x: px + (i - 1.5) * 150,
+        y: 40 + i * 20,
+        baseY: 120,
+        bob: Math.random() * Math.PI * 2,
+        hp: FLYER_HP,
+        shootCd: 1 + i * 0.25,
+        w: 46,
+        h: 34,
+        noReward: true,
+      });
+    }
+    for (let i = 0; i < 40; i++)
+      this.boom(b.x + b.w / 2, b.y + b.h / 2, "#fde047", 3);
   }
 
   private killBoss(b: Boss) {
@@ -2245,6 +2330,16 @@ export class TankGame {
   }
 
   // 판마다 늘어나는 아군 수용 인원 (1단계 2대, 2단계 4대, 6단계 12대 … 계속 증가)
+  // 보스2가 나오는 단계: 상점 바로 다음(4·7·10)과 12단계
+  private isSuperStage(stage: number) {
+    return stage === LOOP_STAGE || (stage > 1 && stage % SHOP_EVERY === 1);
+  }
+
+  // 상점이 열리는 단계: 3·6·9 (12단계는 보스2라 상점 없음)
+  private isShopStage(stage: number) {
+    return stage % SHOP_EVERY === 0 && stage !== LOOP_STAGE;
+  }
+
   private allyCapacity() {
     return this.stage * ALLY_PER_STAGE + this.allyCapBonus; // 🏰
   }
@@ -2495,10 +2590,13 @@ export class TankGame {
     this.boom(cx, cy, "#38bdf8", 16);
     this.sfx.boom();
     // 별 2개를 떨군다
-    for (let k = 0; k < FLYER_STARS; k++) this.dropStar(cx + (k ? 26 : -26), cy);
+    if (!fl.noReward)
+      for (let k = 0; k < FLYER_STARS; k++)
+        this.dropStar(cx + (k ? 26 : -26), cy);
 
     // 확률에 따라 아군이 된다
     if (
+      !fl.noReward &&
       Math.random() < this.flyerAllyChance &&
       this.flyAllies.length < MAX_FLY_ALLIES
     ) {
@@ -2595,12 +2693,21 @@ export class TankGame {
       const ox = b.x + b.w / 2 + b.dir * 60;
       const oy = b.y + 46;
       for (const vy of [-170, 0, 170]) {
-        this.bullets.push({ x: ox, y: oy, vx: b.dir * 330, vy, life: 4 });
+        this.bullets.push({
+          x: ox,
+          y: oy,
+          vx: b.dir * 330,
+          vy,
+          life: 4,
+          heavy: b.kind === "super",
+        });
       }
       this.shake = Math.max(this.shake, 4);
     }
 
-    if (overlap(b, p)) this.hurtPlayer(false, b.x + b.w / 2);
+    // 보스2는 몸에 부딪혀도 아프지 않다 (공격만 아프다)
+    if (b.kind !== "super" && overlap(b, p))
+      this.hurtPlayer(false, b.x + b.w / 2);
   }
 
   private updateBullets(dt: number) {
@@ -2622,7 +2729,8 @@ export class TankGame {
       }
       if (overlap(box, p)) {
         this.bullets.splice(i, 1);
-        this.hurtPlayer(false, s.x);
+        if (s.heavy) this.hurtPlayerPercent(s.x);
+        else this.hurtPlayer(false, s.x);
         continue;
       }
       // 보스 미사일은 아군 탱크도 맞힌다
@@ -2659,6 +2767,37 @@ export class TankGame {
   }
 
   // fromX: 공격이 날아온 x 위치 (없으면 방향을 따지지 않는다)
+  // 👹👹 보스2의 공격 — 체력의 14%씩 깎는다(쌓여서 하트가 줄어든다)
+  private hurtPlayerPercent(fromX: number) {
+    const p = this.player;
+    if (p.invuln > 0) return;
+    // 막기·방어막이 있으면 그대로 막아준다
+    const fromFront = Math.sign(fromX - (p.x + p.w / 2)) !== -p.dir;
+    if (this.guarding && fromFront) {
+      this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
+      return;
+    }
+    if (this.shieldCharges > 0) {
+      this.shieldCharges -= 1;
+      this.blockHit(p.x + p.w / 2 + p.dir * 26, p.y + p.h / 2);
+      p.invuln = INVULN;
+      return;
+    }
+    this.hurtAccum += BOSS2_DMG_PERCENT * this.maxLives();
+    this.shake = 16;
+    this.sfx.hurt();
+    this.boom(p.x + p.w / 2, p.y + p.h / 2, "#ef4444", 14);
+    this.setToast("👹 체력 14% 감소!", 1.2);
+    // 쌓인 만큼 하트를 깎는다 (무적 때문에 막히지 않도록 직접 호출)
+    while (this.hurtAccum >= 1) {
+      this.hurtAccum -= 1;
+      p.invuln = 0;
+      this.hurtPlayer(false, fromX);
+      if (this.phase !== "playing") return;
+    }
+    p.invuln = INVULN;
+  }
+
   private hurtPlayer(fatal: boolean, fromX?: number) {
     const p = this.player;
     if (p.invuln > 0 && !fatal) return;
@@ -2866,6 +3005,8 @@ export class TankGame {
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
       stars: this.starCount,
+      bossSuper: b?.kind === "super",
+      bossPage: b?.page ?? 1,
       bossActive: !!b && this.player.x > (b ? b.x - VIEW_W * 0.7 : Infinity),
       bossHp: b ? Math.max(0, b.hp) : 0,
       bossMaxHp: b ? b.maxHp : 1,
@@ -2874,7 +3015,7 @@ export class TankGame {
     };
     const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
-    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}|${hud.inForge}|${hud.swordFixed}|${hud.forgeUnlocked}|${hud.allyCount}|${hud.flyCount}`;
+    )}|${hud.stars}|${hud.bossActive}${hud.bossSuper}${hud.bossPage}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}|${hud.inForge}|${hud.swordFixed}|${hud.forgeUnlocked}|${hud.allyCount}|${hud.flyCount}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);
@@ -3456,11 +3597,15 @@ export class TankGame {
       ctx.fill();
     }
     // 몸통
-    ctx.fillStyle = b.hurt > 0 ? "#fca5a5" : "#dc2626";
+    const col =
+      b.kind === "super"
+        ? BOSS2_COLORS[Math.min(b.page, BOSS2_COLORS.length) - 1]
+        : { body: "#dc2626", turret: "#7f1d1d" };
+    ctx.fillStyle = b.hurt > 0 ? "#fca5a5" : col.body;
     roundRect(ctx, x + 4, b.y + 34, b.w - 8, b.h - 56, 12);
     ctx.fill();
     // 포탑 + 포신 3문 (바라보는 쪽으로 튀어나오게)
-    ctx.fillStyle = "#7f1d1d";
+    ctx.fillStyle = col.turret;
     roundRect(ctx, x + b.w * 0.28, b.y + 4, b.w * 0.44, 38, 10);
     ctx.fill();
     const bw = b.w * 0.3;
