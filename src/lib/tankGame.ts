@@ -133,6 +133,19 @@ export const SHOP_GOODS: ShopGood[] = [
   { id: "allyheal", kind: "item", icon: "💞", name: "아군 회복약", price: 16, desc: "모든 아군의 체력을 가득 채워요" },
   { id: "timestop", kind: "item", icon: "⏳", name: "시간 정지", price: 35, desc: "6초 동안 적도 보스도 완전히 멈춰요" },
   { id: "fourstar", kind: "item", icon: "🌠", name: "별똥별", price: 24, desc: "별 12개가 쏟아져요" },
+  { id: "coin", kind: "item", icon: "🪙", name: "금화", price: 5, desc: "별 8개로 바꿔줘요" },
+  { id: "bubble", kind: "item", icon: "🫧", name: "비누거품", price: 15, desc: "적이 5초 동안 멈춰요" },
+  { id: "candle", kind: "item", icon: "🕯️", name: "양초", price: 14, desc: "10초 동안 적이 나를 못 찾아요" },
+  { id: "boomerang", kind: "item", icon: "🪃", name: "부메랑", price: 16, desc: "앞뒤 양쪽 적을 모두 밀어내요" },
+  { id: "extinguisher", kind: "item", icon: "🧯", name: "소화기", price: 12, desc: "적 미사일을 없애고 3초 멈춰요" },
+  { id: "tsunami", kind: "item", icon: "🌊", name: "해일", price: 26, desc: "적을 멀리 밀어내고 6초 느리게 해요" },
+  { id: "meteor", kind: "item", icon: "☄️", name: "운석", price: 34, desc: "화면의 적을 모두 쓸어버리고 별이 쏟아져요" },
+  { id: "elixir", kind: "item", icon: "🧪", name: "만능약", price: 30, desc: "하트를 가득 채우고 방어막 3개가 생겨요" },
+  { id: "gift", kind: "item", icon: "🎁", name: "선물상자", price: 18, desc: "열어보면 좋은 일이 생겨요 (별·하트·방어막)" },
+  { id: "orb", kind: "item", icon: "🔮", name: "예언구", price: 24, desc: "8초 동안 아무것도 안 아파요" },
+  { id: "amulet", kind: "item", icon: "🧿", name: "수호부적", price: 32, desc: "방어막 4개와 5초 무적이 함께 와요" },
+  { id: "storm", kind: "item", icon: "🪶", name: "깃털폭풍", price: 22, desc: "12초 동안 빨리 달리고 높이 뛰어요" },
+
   // ───── [전리품] 사는 순간부터 판이 끝날 때까지 계속 효과 ─────
   { id: "ally", kind: "loot", icon: "🚙", name: "아군 호출기", price: 20, desc: "아군 탱크 1대가 바로 합류해요" },
   { id: "ally2", kind: "loot", icon: "🚙🚙", name: "아군 호출기 둘", price: 35, desc: "아군 탱크 2대가 바로 합류해요" },
@@ -159,6 +172,19 @@ export const SHOP_GOODS: ShopGood[] = [
   { id: "revive", kind: "loot", icon: "💘", name: "부활의 깃털", price: 60, desc: "하트가 다 떨어져도 한 번 되살아나요", once: true },
   { id: "starbonus", kind: "loot", icon: "🌟", name: "별 보너스", price: 35, desc: "단계를 깰 때마다 ⭐ 10개를 받아요", once: true },
   { id: "toolbox", kind: "loot", icon: "🧰", name: "수리 도구", price: 40, desc: "단계마다 아군 체력이 가득 차요", once: true },
+  { id: "goldarmor", kind: "loot", icon: "🏅", name: "황금 갑옷", price: 70, desc: "하트 최대치가 3 늘고 가득 채워져요", once: true },
+  { id: "turbo", kind: "loot", icon: "⚙️", name: "초고속 장전", price: 45, desc: "미사일이 훨씬 더 빨리 나가요", once: true },
+  { id: "lightfoot", kind: "loot", icon: "🏃", name: "번개 발", price: 45, desc: "훨씬 더 빨리 달려요", once: true },
+  { id: "skyshoes", kind: "loot", icon: "👠", name: "하늘 신발", price: 40, desc: "훨씬 더 높이 점프해요", once: true },
+  { id: "starmagnet", kind: "loot", icon: "💫", name: "별 자석", price: 55, desc: "⭐ 줍는 범위가 4배가 돼요", once: true },
+  { id: "trophy", kind: "loot", icon: "🏆", name: "우승 트로피", price: 60, desc: "단계를 깰 때마다 ⭐ 25개를 받아요", once: true },
+  { id: "clinic", kind: "loot", icon: "🩺", name: "응급 치료소", price: 55, desc: "12초마다 하트가 1씩 차올라요", once: true },
+  { id: "wall", kind: "loot", icon: "🔰", name: "철벽", price: 55, desc: "10초마다 방어막이 1 생겨요", once: true },
+  { id: "dragon", kind: "loot", icon: "🐉", name: "용의 비늘", price: 50, desc: "적과 부딪혀도 아프지 않아요", once: true },
+  { id: "gravity", kind: "loot", icon: "🌐", name: "중력 장치", price: 45, desc: "⭐이 항상 조금씩 끌려와요", once: true },
+  { id: "medal", kind: "loot", icon: "🎖️", name: "훈장", price: 50, desc: "아군들의 체력이 2배가 돼요", once: true },
+  { id: "peace", kind: "loot", icon: "🕊️", name: "평화의 깃발", price: 40, desc: "적이 아군이 될 확률이 많이 늘어나요", once: true },
+
   // ───── [회복음식] 사면 그 자리에서 바로 회복 ─────
   { id: "apple", kind: "food", icon: "🍎", name: "사과", price: 6, desc: "하트를 1 회복해요" },
   { id: "cookie", kind: "food", icon: "🍪", name: "쿠키", price: 7, desc: "하트를 1 회복해요" },
@@ -184,6 +210,18 @@ export const SHOP_GOODS: ShopGood[] = [
   { id: "choco", kind: "food", icon: "🍫", name: "초콜릿", price: 27, desc: "하트를 5 회복해요" },
   { id: "bigcake", kind: "food", icon: "🎂", name: "생일 케이크", price: 34, desc: "하트를 가득 채우고 최대 하트도 1 늘어요" },
   { id: "tonic", kind: "food", icon: "🍵", name: "보약", price: 38, desc: "하트를 가득 채우고 방어막이 3 생겨요" },
+  { id: "croissant", kind: "food", icon: "🥐", name: "크루아상", price: 9, desc: "하트를 1 회복해요" },
+  { id: "cupcake", kind: "food", icon: "🧁", name: "컵케이크", price: 11, desc: "하트를 1 회복해요" },
+  { id: "juice", kind: "food", icon: "🥤", name: "주스", price: 12, desc: "하트를 2 회복해요" },
+  { id: "donut", kind: "food", icon: "🍩", name: "도넛", price: 13, desc: "하트를 2 회복해요" },
+  { id: "watermelon", kind: "food", icon: "🍉", name: "수박", price: 14, desc: "하트를 2 회복해요" },
+  { id: "dumpling", kind: "food", icon: "🥟", name: "만두", price: 15, desc: "하트를 2 회복해요" },
+  { id: "pasta", kind: "food", icon: "🍝", name: "파스타", price: 18, desc: "하트를 3 회복해요" },
+  { id: "hotdog", kind: "food", icon: "🌭", name: "핫도그", price: 19, desc: "하트를 3 회복해요" },
+  { id: "curry", kind: "food", icon: "🍛", name: "카레", price: 20, desc: "하트를 3 회복해요" },
+  { id: "steak", kind: "food", icon: "🥩", name: "스테이크", price: 24, desc: "하트를 4 회복해요" },
+  { id: "hotpot", kind: "food", icon: "🍲", name: "전골", price: 29, desc: "하트를 5 회복해요" },
+  { id: "potion2", kind: "food", icon: "🏺", name: "신비한 물약", price: 45, desc: "하트를 가득 채우고 최대 하트 +1, 방어막 2개" },
 ];
 
 // 상점에서 한 번에 보여줄 품목 수(분류당 1개)와 다시 뽑는 값
@@ -751,6 +789,17 @@ export class TankGame {
   private hurtAccum = 0; // 보스2 피해 누적(하트 단위) // 💘 부활의 깃털
   private stageStarBonus = false; // 🌟 별 보너스
   private allyToolbox = false; // 🧰 수리 도구
+  // 상위 전리품
+  private lightFoot = false; // 🏃 번개 발
+  private skyShoes = false; // 👠 하늘 신발
+  private turboReload = false; // ⚙️ 초고속 장전
+  private regenEvery = 20; // 🩹 응급 붕대 / 🩺 응급 치료소
+  private shieldGenEvery = 15; // 🔋 발전기 / 🔰 철벽
+  private stageStarAmount = 10; // 🌟 별 보너스 / 🏆 우승 트로피
+  private noContact = false; // 🐉 용의 비늘
+  private allyHpMult = 1; // 🎖️ 훈장
+  private gravityPull = false; // 🌐 중력 장치
+  private allyChance = ALLY_CHANCE; // 🕊️ 평화의 깃발
 
   private enemies: Enemy[] = [];
   private flyers: Flyer[] = []; // 하늘을 나는 적
@@ -929,7 +978,7 @@ export class TankGame {
           break;
         case "regen":
           this.autoRegen = true;
-          this.regenCd = 20;
+          this.regenCd = this.regenEvery;
           break;
         case "barracks":
           this.allyCapBonus += 3;
@@ -951,7 +1000,7 @@ export class TankGame {
           break;
         case "generator":
           this.shieldGen = true;
-          this.shieldGenCd = 15;
+          this.shieldGenCd = this.shieldGenEvery;
           break;
         case "luck":
           this.flyerAllyChance = Math.min(1, this.flyerAllyChance + 0.15);
@@ -968,6 +1017,57 @@ export class TankGame {
           break;
         case "toolbox":
           this.allyToolbox = true;
+          break;
+        case "goldarmor":
+          this.bonusLives += 3;
+          this.lives = this.maxLives();
+          break;
+        case "turbo":
+          this.turboReload = true;
+          break;
+        case "lightfoot":
+          this.lightFoot = true;
+          break;
+        case "skyshoes":
+          this.skyShoes = true;
+          break;
+        case "starmagnet":
+          this.magnetLevel = 4;
+          break;
+        case "trophy":
+          this.stageStarBonus = true;
+          this.stageStarAmount = 25;
+          break;
+        case "clinic":
+          this.autoRegen = true;
+          this.regenEvery = 12;
+          this.regenCd = 12;
+          break;
+        case "wall":
+          this.shieldGen = true;
+          this.shieldGenEvery = 10;
+          this.shieldGenCd = 10;
+          break;
+        case "dragon":
+          this.noContact = true;
+          break;
+        case "gravity":
+          this.gravityPull = true;
+          break;
+        case "medal":
+          this.allyHpMult = 2;
+          this.allies.forEach((a) => {
+            a.maxHp = ALLY_HP * 2;
+            a.hp = a.maxHp;
+          });
+          this.flyAllies.forEach((a) => {
+            a.maxHp = FLY_ALLY_HP * 2;
+            a.hp = a.maxHp;
+          });
+          break;
+        case "peace":
+          this.allyChance = Math.min(1, this.allyChance + 0.25);
+          this.flyerAllyChance = Math.min(1, this.flyerAllyChance + 0.1);
           break;
         // 🍗 회복음식
         case "apple":
@@ -1016,6 +1116,32 @@ export class TankGame {
         case "bigcake":
           this.bonusLives += 1;
           this.lives = this.maxLives();
+          break;
+        case "croissant":
+        case "cupcake":
+          heal(1);
+          break;
+        case "juice":
+        case "donut":
+        case "watermelon":
+        case "dumpling":
+          heal(2);
+          break;
+        case "pasta":
+        case "hotdog":
+        case "curry":
+          heal(3);
+          break;
+        case "steak":
+          heal(4);
+          break;
+        case "hotpot":
+          heal(5);
+          break;
+        case "potion2":
+          this.bonusLives += 1;
+          this.lives = this.maxLives();
+          this.shieldCharges = Math.max(this.shieldCharges, 2);
           break;
         case "tonic":
           this.lives = this.maxLives();
@@ -1238,11 +1364,118 @@ export class TankGame {
         this.sfx.star();
         break;
       }
+      case "coin":
+        this.starCount += 8;
+        this.sfx.star();
+        this.setToast("🪙 별 8개로 바꿨다!", 1.6);
+        break;
+      case "bubble":
+        this.freezeTimer = Math.max(this.freezeTimer, 5);
+        this.sfx.guard();
+        break;
+      case "candle":
+        this.hideTimer = Math.max(this.hideTimer, 10);
+        this.sfx.transform();
+        break;
+      case "boomerang": {
+        // 앞뒤 양쪽 적을 모두 밀어낸다
+        let pushed = 0;
+        for (const e of this.enemies) {
+          const sx = e.x - this.camX;
+          if (sx < -60 || sx > VIEW_W + 60) continue;
+          e.x += Math.sign(e.x + e.w / 2 - cx || 1) * 220;
+          e.vy = -400;
+          pushed += 1;
+        }
+        this.shake = 14;
+        this.sfx.swing(true);
+        this.setToast(`🪃 앞뒤 적 ${pushed}마리를 밀어냈다!`, 1.6);
+        break;
+      }
+      case "extinguisher":
+        this.bullets = [];
+        this.freezeTimer = Math.max(this.freezeTimer, 3);
+        this.sfx.guard();
+        this.setToast("🧯 미사일이 사라지고 적이 멈췄다!", 1.6);
+        break;
+      case "tsunami": {
+        for (const e of this.enemies) {
+          const sx = e.x - this.camX;
+          if (sx < -60 || sx > VIEW_W + 60) continue;
+          e.x += Math.sign(e.x + e.w / 2 - cx || 1) * 300;
+          e.vy = -420;
+        }
+        for (const fl of this.flyers) fl.x += Math.sign(fl.x + fl.w / 2 - cx || 1) * 240;
+        this.slowTimer = Math.max(this.slowTimer, 6);
+        this.shake = 20;
+        this.sfx.swing(true);
+        break;
+      }
+      case "meteor": {
+        // 화면의 적을 모두 쓸어버리고 별이 쏟아진다
+        let hit = 0;
+        for (let j = this.enemies.length - 1; j >= 0; j--) {
+          const e = this.enemies[j];
+          const sx = e.x - this.camX;
+          if (sx < -80 || sx > VIEW_W + 80) continue;
+          this.enemies.splice(j, 1);
+          if (!e.noReward) this.dropStar(e.x + e.w / 2, e.y + e.h / 2);
+          this.boom(e.x + e.w / 2, e.y + e.h / 2, "#fb923c", 20);
+          hit += 1;
+        }
+        for (let j = this.flyers.length - 1; j >= 0; j--) {
+          const fl = this.flyers[j];
+          const sx = fl.x - this.camX;
+          if (sx < -80 || sx > VIEW_W + 80) continue;
+          this.hitFlyer(j);
+          hit += 1;
+        }
+        for (let k = 0; k < 8; k++) this.dropStar(cx + (k - 3.5) * 50, cy - 220);
+        this.shake = 28;
+        this.sfx.boom();
+        this.setToast(`☄️ 운석! 적 ${hit}마리를 쓸어버렸다!`, 1.8);
+        break;
+      }
+      case "elixir":
+        this.lives = this.maxLives();
+        this.shieldCharges = Math.max(this.shieldCharges, 3);
+        this.sfx.star();
+        break;
+      case "gift": {
+        // 열어보면 세 가지 중 하나가 나온다
+        const roll = Math.floor(Math.random() * 3);
+        if (roll === 0) {
+          this.starCount += 10;
+          this.setToast("🎁 상자에서 ⭐ 10개가 나왔다!", 2);
+        } else if (roll === 1) {
+          this.shieldCharges = Math.max(this.shieldCharges, 2);
+          this.setToast("🎁 상자에서 방어막 2개가 나왔다!", 2);
+        } else {
+          this.lives = Math.min(this.maxLives(), this.lives + 2);
+          this.setToast("🎁 상자에서 하트 2개가 나왔다!", 2);
+        }
+        this.sfx.star();
+        break;
+      }
+      case "orb":
+        p.invuln = 8;
+        this.sfx.transform();
+        break;
+      case "amulet":
+        this.shieldCharges = Math.max(this.shieldCharges, 4);
+        p.invuln = Math.max(p.invuln, 5);
+        this.sfx.guard();
+        break;
+      case "storm":
+        this.dashTimer = Math.max(this.dashTimer, 12);
+        this.featherTimer = Math.max(this.featherTimer, 12);
+        this.sfx.jump();
+        break;
     }
 
     for (let i = 0; i < 16; i++)
       this.spark(cx, cy, i % 2 ? "#7dd3fc" : "#fde047");
-    if (good.id !== "bolt")
+    if (!["bolt", "coin", "boomerang", "extinguisher", "meteor", "gift"].includes(good.id))
       this.setToast(`${good.icon} ${good.name} 사용!`, 1.8);
     return true;
   }
@@ -1436,6 +1669,16 @@ export class TankGame {
     this.hurtAccum = 0;
     this.stageStarBonus = false;
     this.allyToolbox = false;
+    this.lightFoot = false;
+    this.skyShoes = false;
+    this.turboReload = false;
+    this.regenEvery = 20;
+    this.shieldGenEvery = 15;
+    this.stageStarAmount = 10;
+    this.noContact = false;
+    this.allyHpMult = 1;
+    this.gravityPull = false;
+    this.allyChance = ALLY_CHANCE;
     this.allies = [];
     this.loadStage(Math.max(1, Math.round(stage)));
   }
@@ -1467,7 +1710,7 @@ export class TankGame {
     this.phaseTimer = 0;
     if (keepAllies) {
       // 🌟 별 보너스: 단계를 깰 때마다 ⭐ 10
-      if (this.stageStarBonus) this.starCount += 10;
+      if (this.stageStarBonus) this.starCount += this.stageStarAmount;
     }
     // 🏁 출발 방어막
     if (this.startShield) this.shieldCharges = Math.max(this.shieldCharges, 2);
@@ -1792,7 +2035,7 @@ export class TankGame {
     const dirIn = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
     const speed =
       MOVE_SPEED *
-      (this.fastFoot ? 1.2 : 1) * // 👟 날쌘 발
+      (this.lightFoot ? 1.5 : this.fastFoot ? 1.2 : 1) * // 👟 날쌘 발 / 🏃 번개 발
       (this.dashTimer > 0 ? 1.5 : 1); // 🥾 질주
     p.vx = this.guarding ? 0 : dirIn * speed;
     if (dirIn !== 0 && !this.guarding) p.dir = dirIn;
@@ -1802,7 +2045,7 @@ export class TankGame {
     if (p.onGround) this.jumpUsed = 0;
     const jumpPower =
       JUMP_V *
-      (this.highJump ? 1.15 : 1) * // 🦘 용수철 신발
+      (this.skyShoes ? 1.3 : this.highJump ? 1.15 : 1) * // 🦘 용수철 신발 / 👠 하늘 신발
       (this.featherTimer > 0 ? 1.3 : 1); // 🪽 깃털
     // 🪂 이중 점프: 공중에서 한 번 더
     const canAirJump =
@@ -1881,6 +2124,7 @@ export class TankGame {
   private updateStars(dt: number) {
     const p = this.player;
     const magnet = this.magnetTimer > 0;
+    const pull = magnet ? 620 : this.gravityPull ? 160 : 0; // 🌐 중력 장치
     const reach = (magnet ? 60 : 40) * this.magnetLevel; // 📿 🧲
     const px = p.x + p.w / 2;
     const py = p.y + p.h / 2;
@@ -1901,13 +2145,13 @@ export class TankGame {
       }
 
       // 🧲 자석: 화면에 보이는 별을 모두 끌어당긴다
-      if (magnet) {
+      if (pull > 0) {
         const sx = s.x - this.camX;
         if (sx > -60 && sx < VIEW_W + 60) {
           const dx = px - s.x;
           const dy = py - s.y;
           const len = Math.hypot(dx, dy) || 1;
-          const step = Math.min(len, 620 * dt);
+          const step = Math.min(len, pull * dt);
           s.x += (dx / len) * step;
           s.y += (dy / len) * step;
         }
@@ -1966,7 +2210,7 @@ export class TankGame {
       if (this.cool <= 0 && this.special.left === 0) {
         this.cool =
           FIRE_COOLDOWN *
-          (this.fastReload ? 0.6 : 1) * // 🔥 빠른 장전
+          (this.turboReload ? 0.42 : this.fastReload ? 0.6 : 1) * // 🔥 빠른 장전 / ⚙️ 초고속 장전
           (this.rapidTimer > 0 ? 0.45 : 1); // 🔫 속사
         this.tut.attacked = true; // 직접 눌러서 쏜 것만 "배웠다"로 친다
         this.attack("normal", p.dir, this.salvoSeq++);
@@ -2345,7 +2589,7 @@ export class TankGame {
   }
 
   private maybeAlly() {
-    if (Math.random() >= ALLY_CHANCE) return; // 6. 10% 확률
+    if (Math.random() >= this.allyChance) return; // 6. 10% 확률 (🕊️ 평화의 깃발로 늘어남)
     this.addAlly();
   }
 
@@ -2357,8 +2601,8 @@ export class TankGame {
       x: p.x,
       y: p.y - 110,
       bob: Math.random() * Math.PI * 2,
-      hp: FLY_ALLY_HP,
-      maxHp: FLY_ALLY_HP,
+      hp: FLY_ALLY_HP * this.allyHpMult,
+      maxHp: FLY_ALLY_HP * this.allyHpMult,
       shootCd: 0.6,
       hurtCd: 0,
       offset: 70 + this.flyAllies.length * 24,
@@ -2384,8 +2628,8 @@ export class TankGame {
       // 수가 많아져도 화면 밖까지 늘어지지 않게 8대마다 간격을 되돌린다(겹쳐도 됨)
       offset: 60 + (this.allies.length % ALLY_ROW) * 26 + Math.random() * 18,
       puff: 0,
-      hp: ALLY_HP,
-      maxHp: ALLY_HP,
+      hp: ALLY_HP * this.allyHpMult,
+      maxHp: ALLY_HP * this.allyHpMult,
       hurtCd: 0,
     });
     this.setToast(
@@ -2459,8 +2703,8 @@ export class TankGame {
         continue;
       }
       if (overlap(e, p)) {
-        const blocked = this.guarding;
-        this.hurtPlayer(false, e.x + e.w / 2);
+        const blocked = this.guarding || this.noContact; // 🐉 용의 비늘
+        if (!this.noContact) this.hurtPlayer(false, e.x + e.w / 2);
         // 막고 있으면 부딪힌 적을 튕겨낸다
         if (blocked) {
           e.x += (e.x + e.w / 2 < p.x + p.w / 2 ? -1 : 1) * 30;
@@ -2604,8 +2848,8 @@ export class TankGame {
         x: cx,
         y: cy,
         bob: Math.random() * Math.PI * 2,
-        hp: FLY_ALLY_HP,
-        maxHp: FLY_ALLY_HP,
+        hp: FLY_ALLY_HP * this.allyHpMult,
+        maxHp: FLY_ALLY_HP * this.allyHpMult,
         shootCd: 0.6,
         hurtCd: 0,
         offset: 70 + this.flyAllies.length * 24,
