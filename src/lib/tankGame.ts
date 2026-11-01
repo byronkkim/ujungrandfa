@@ -181,6 +181,12 @@ export const SHOP_REROLL_PRICE = 3;
 // 🔨 대장간 — 검사만 들어갈 수 있다. 낡은 검을 고치면 능력이 붙는다.
 export const FORGE_REPAIR_PRICE = 50;
 
+// 🔒 대장간 자물쇠 — 조건을 갖추고 해제하면 열린다.
+// 검사 상태를 뺀 나머지는 해제할 때 소모된다.
+export const FORGE_NEED_ALLIES = 3; // 아군 탱크
+export const FORGE_NEED_FLY = 1; // 하늘 아군(UFO)
+export const FORGE_NEED_LIVES = 4; // 하트
+
 // 🛸 하늘을 나는 적 — 위아래로 움직이며 1초마다 미사일을 쏜다
 const FLYER_HP = 1;
 const FLYER_STARS = 2; // 물리치면 주는 별
@@ -231,6 +237,9 @@ export type Hud = {
   itemCount: number; // 가방에 든 아이템 총 개수
   bestStage: number; // 지금까지 깬 가장 높은 단계
   inForge: boolean; // 🔨 대장간 화면인지
+  forgeUnlocked: boolean; // 🔒 자물쇠를 풀었는지
+  allyCount: number; // 자물쇠 조건 표시용
+  flyCount: number;
   swordFixed: boolean; // 검을 고쳤는지
   charge: number; // 0~1
   enemies: number;
@@ -672,6 +681,7 @@ export class TankGame {
   private bonusLives = 0; // 전리품으로 늘린 하트 최대치
   private bought: string[] = []; // 이번 판에 산 품목
   private shopOffer: string[] = []; // 지금 상점에 걸린 품목(분류당 1개)
+  private forgeUnlocked = false; // 🔒 자물쇠를 풀었는지
   private inForge = false; // 🔨 대장간 화면에 들어와 있는지
   private swordFixed = false; // 검을 고쳤는지
   private forgeShieldCd = 0; // 방어막이 다시 생기기까지
@@ -1208,8 +1218,56 @@ export class TankGame {
   }
 
   // 🔨 대장간 — 검사만 들어갈 수 있다 (탱크가 누르면 아무 일도 일어나지 않는다)
+  // 🔒 자물쇠 조건 상태 (화면에 보여주기 위한 값)
+  forgeLock() {
+    return {
+      unlocked: this.forgeUnlocked,
+      sword: this.form === "sword",
+      allies: this.allies.length,
+      needAllies: FORGE_NEED_ALLIES,
+      fly: this.flyAllies.length,
+      needFly: FORGE_NEED_FLY,
+      lives: this.lives,
+      needLives: FORGE_NEED_LIVES,
+    };
+  }
+
+  // 🔓 자물쇠 해제 — 조건을 모두 갖추면 열리고, 검사 상태를 뺀 나머지는 소모된다
+  unlockForge(): boolean {
+    if (this.phase !== "shop" || this.forgeUnlocked) return false;
+    const L = this.forgeLock();
+    if (!L.sword) {
+      this.setToast("🔒 검사일 때만 열 수 있어요", 2);
+      this.pushHud();
+      return false;
+    }
+    if (
+      L.allies < FORGE_NEED_ALLIES ||
+      L.fly < FORGE_NEED_FLY ||
+      L.lives < FORGE_NEED_LIVES
+    ) {
+      this.setToast("🔒 아직 조건이 모자라요", 2);
+      this.pushHud();
+      return false;
+    }
+    // 소모
+    this.allies.splice(0, FORGE_NEED_ALLIES);
+    this.flyAllies.splice(0, FORGE_NEED_FLY);
+    this.lives -= FORGE_NEED_LIVES;
+    this.forgeUnlocked = true;
+    this.sfx.transform();
+    this.setToast("🔓 자물쇠가 풀렸다! 대장간이 열렸어요", 3);
+    this.pushHud();
+    return true;
+  }
+
   enterForge(): boolean {
     if (this.phase !== "shop" || this.form !== "sword") return false;
+    if (!this.forgeUnlocked) {
+      this.setToast("🔒 자물쇠가 잠겨 있어요", 2);
+      this.pushHud();
+      return false;
+    }
     this.inForge = true;
     this.pushHud();
     return true;
@@ -1314,6 +1372,7 @@ export class TankGame {
     this.bought = [];
     this.shopOffer = [];
     this.inForge = false;
+    this.forgeUnlocked = false;
     this.swordFixed = false;
     this.flyAllies = [];
     this.flyerAllyChance = FLYER_ALLY_CHANCE;
@@ -2800,6 +2859,9 @@ export class TankGame {
       itemCount: Object.values(this.items).reduce((a, b) => a + b, 0),
       bestStage: this.bestStage,
       inForge: this.inForge,
+      forgeUnlocked: this.forgeUnlocked,
+      allyCount: this.allies.length,
+      flyCount: this.flyAllies.length,
       swordFixed: this.swordFixed,
       charge: this.charge / CHARGE_TIME,
       enemies: this.enemies.length,
@@ -2812,7 +2874,7 @@ export class TankGame {
     };
     const key = `${hud.stage}|${hud.form}|${hud.lives}|${hud.allies}/${hud.allyCap}|${Math.round(
       hud.charge * 20,
-    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}|${hud.inForge}|${hud.swordFixed}`;
+    )}|${hud.stars}|${hud.bossActive}|${hud.bossHp}|${hud.phase}|${hud.toast}|${hud.tutorialText}|${hud.itemIcon}${hud.itemCount}|${hud.shieldCharges}|${hud.bought.length}|${hud.shopOffer.join()}|${hud.bestStage}|${hud.inForge}|${hud.swordFixed}|${hud.forgeUnlocked}|${hud.allyCount}|${hud.flyCount}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);

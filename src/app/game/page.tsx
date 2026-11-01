@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   SHOP_GOODS,
+  FORGE_NEED_ALLIES,
+  FORGE_NEED_FLY,
+  FORGE_NEED_LIVES,
   FORGE_REPAIR_PRICE,
   SHOP_REROLL_PRICE,
   TankGame,
@@ -78,6 +81,9 @@ const INITIAL_HUD: Hud = {
   itemCount: 0,
   bestStage: 0,
   inForge: false,
+  forgeUnlocked: false,
+  allyCount: 0,
+  flyCount: 0,
   swordFixed: false,
   charge: 0,
   enemies: 0,
@@ -399,6 +405,10 @@ export default function GamePage() {
   // 🔨 대장간 (검사만 들어갈 수 있다 — 탱크가 눌러도 아무 일도 안 일어남)
   const enterForge = useCallback(() => {
     gameRef.current?.enterForge();
+  }, []);
+  const unlockForge = useCallback(() => {
+    gameRef.current?.enableAudio();
+    gameRef.current?.unlockForge();
   }, []);
   const repairSword = useCallback(() => {
     gameRef.current?.repairSword();
@@ -906,17 +916,41 @@ export default function GamePage() {
             </div>
 
             <div className="mt-1.5 flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              <button
-                type="button"
-                onClick={enterForge}
-                className={`rounded-xl border-2 px-3 py-2 text-[11px] font-bold transition sm:text-sm ${
-                  hud.form === "sword"
-                    ? "border-orange-400 bg-orange-900/50 text-orange-100 hover:bg-orange-800/60"
-                    : "border-slate-700 bg-slate-800/50 text-slate-500"
-                }`}
-              >
-                🔨 대장간
-              </button>
+              {hud.forgeUnlocked ? (
+                <button
+                  type="button"
+                  onClick={enterForge}
+                  className={`rounded-xl border-2 px-3 py-2 text-[11px] font-bold transition sm:text-sm ${
+                    hud.form === "sword"
+                      ? "border-orange-400 bg-orange-900/50 text-orange-100 hover:bg-orange-800/60"
+                      : "border-slate-700 bg-slate-800/50 text-slate-500"
+                  }`}
+                >
+                  🔨 대장간
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={unlockForge}
+                  className="rounded-xl border-2 border-amber-500/70 bg-slate-800 px-3 py-1.5 text-left text-[10px] font-bold text-amber-200 transition hover:bg-slate-700 sm:text-xs"
+                >
+                  🔒 대장간 자물쇠 해제
+                  <span className="mt-0.5 block font-normal opacity-90">
+                    <span className={hud.form === "sword" ? "text-emerald-300" : "text-slate-500"}>
+                      🗡️검사
+                    </span>{" "}
+                    <span className={hud.allyCount >= FORGE_NEED_ALLIES ? "text-emerald-300" : "text-slate-400"}>
+                      🚙{hud.allyCount}/{FORGE_NEED_ALLIES}
+                    </span>{" "}
+                    <span className={hud.flyCount >= FORGE_NEED_FLY ? "text-emerald-300" : "text-slate-400"}>
+                      🛸{hud.flyCount}/{FORGE_NEED_FLY}
+                    </span>{" "}
+                    <span className={hud.lives >= FORGE_NEED_LIVES ? "text-emerald-300" : "text-slate-400"}>
+                      ❤️{hud.lives}/{FORGE_NEED_LIVES}
+                    </span>
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={reroll}
