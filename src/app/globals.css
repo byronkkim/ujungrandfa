@@ -61,6 +61,19 @@ body {
 .slot-empty {
   animation: slot-pulse 2.6s ease-in-out infinite;
 }
+/* 어떤 창 크기에서도 게임이 창 안에 들어오게 한다.
+   (게임 화면은 16:9라서, 쓸 수 있는 높이로부터 최대 폭을 역산)
+   위아래의 상단바·조작 버튼·설명 자리를 13rem 남겨둔다. */
+.game-stage {
+  max-width: min(100%, calc((100dvh - 13rem) * 16 / 9));
+}
+
+/* 상단 정보는 한 줄에 최대한 담기도록 촘촘하게 */
+.game-topbar {
+  font-size: 12px;
+  row-gap: 0.25rem;
+}
+
 /* 휴대폰 가로 화면: 게임이 화면 높이를 꽉 채우도록.
    캔버스는 16:9라서 쓸 수 있는 높이로부터 폭을 역산한다. */
 @media (orientation: landscape) and (max-height: 620px) {

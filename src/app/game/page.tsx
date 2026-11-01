@@ -24,6 +24,20 @@ const SHOP_SECTIONS: { kind: ShopKind; title: string }[] = [
   { kind: "food", title: "🍗 회복음식" },
 ];
 
+// 눌렀을 때 페이지가 스크롤되는 키들 — 게임 중에는 전부 막는다
+// (안 막으면 버튼을 누를 때마다 화면이 밀려 상단 정보가 보이지 않는다)
+const SCROLL_KEYS = new Set([
+  "Space",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+]);
+
 const KEY_MAP: Record<string, keyof GameInput> = {
   ArrowLeft: "left",
   KeyA: "left",
@@ -192,7 +206,11 @@ export default function GamePage() {
       )
         return;
       // 📖 스토리를 보는 동안에는 게임 조작키가 하나도 먹지 않는다
-      if (storyOpenRef.current) return;
+      // (단, 화면이 밀리지 않게 스크롤 키는 막아둔다)
+      if (storyOpenRef.current) {
+        if (SCROLL_KEYS.has(e.code)) e.preventDefault();
+        return;
+      }
       const action = KEY_MAP[e.code];
       if (action) {
         e.preventDefault();
@@ -200,6 +218,7 @@ export default function GamePage() {
         game.setInput({ [action]: down });
         return;
       }
+      if (SCROLL_KEYS.has(e.code)) e.preventDefault();
       if (down && e.code === "KeyM") game.useItem(); // 🎒 아이템 쓰기
       if (down && e.code === "KeyR") game.restart(stagePickRef.current);
     };
